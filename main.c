@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+#include <stdint.h>
+#include <sys/types.h>
 
 #include "rollback.h"
 #include "utils.h"
-
 
 /*
  *argv[0] program name
