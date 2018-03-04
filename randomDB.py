@@ -1,5 +1,6 @@
 import sqlite3
 import random
+import time
 
 def choose_class():
 	rand = random.randint(1, 9)
@@ -44,42 +45,53 @@ def random_read(conn):
 	c.execute('''SELECT * FROM characters''')
 	conn.commit()
 
-def random_insert(conn):
+def random_insert(conn, index):
 	cls = choose_class()
 	name = choose_name()
 	hp = random.randint(1, 30)
 	lvl = random.randint(1, 21)
-	c = conn.cursor()
-	character = (cls, name, hp, "yes", lvl)
-	c.execute("INSERT INTO characters VALUES (?,?,?,?,?)", character)
-	conn.commit()
+	try:
+		c = conn.cursor()
+		character = (index, name, cls, hp, "yes", lvl)
+		c.execute("INSERT INTO characters VALUES (?,?,?,?,?,?)", character)
+		conn.commit()
+	except:
+		print "Insert failed"
 
 def random_update(conn):
 	cls = choose_class()
 	name = choose_name()
 	hp = random.randint(1, 30)
-	lvl = random.randin(1, 21)
-	c = conn.cursor()
-	c.execute("UPDATE characters SET hp = %d WHERE name = %s" % (hp, name))
-	conn.commit()
+	lvl = random.randint(1, 21)
+	try:
+		c = conn.cursor()
+		c.execute("UPDATE characters SET hp = %d WHERE name = %s" % (hp, name))
+		conn.commit()
+	except:
+		print "Update failed"
 	
 
 def main_loop():
+	characterIndex = 1
 	conn = sqlite3.connect('testing.db')
 	print "Connection established"
 	c = conn.cursor()
-	c.execute('''CREATE TABLE characters (name text, class text, hp real, alive text, lvl real)''')
+	c.execute('''CREATE TABLE IF NOT EXISTS characters (id real, name text, class text, hp real, alive text, lvl real)''')
 	conn.commit()
-	while():
+	while True:
 		ran = random.randint(1, 4)
 		if (ran == 1):
 			random_read(conn)
-		else if(ran == 2):
-			random_insert(conn)
+			print "Random read"
+		elif(ran == 2):
+			random_insert(conn, characterIndex)
+			print "Random insert"
+			characterIndex += 1
 		else:
 			random_update(conn)
-		
+			print "Random update"
+		time.sleep(5)
 	conn.close()
 	
 if __name__ == "__main__":
-	main()
+	main_loop()
