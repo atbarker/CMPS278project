@@ -21,8 +21,6 @@ def choose_class():
 		cls = "ranger"
 	if(rand == 8):
 		cls = "wizard"
-	else:
-		cls = "bort"
 	return cls
 
 def choose_name():
@@ -36,8 +34,6 @@ def choose_name():
 		name = "bob"
 	if(rand == 4):
 		name = "stanley"
-	else:
-		name = "4"
 	return name
 
 def random_read(conn):
@@ -78,6 +74,7 @@ def main_loop():
 	c = conn.cursor()
 	c.execute('''CREATE TABLE IF NOT EXISTS characters (id real, name text, class text, hp real, alive text, lvl real)''')
 	conn.commit()
+	conn.execute('pragma journal_mode=wal')
 	while True:
 		ran = random.randint(1, 4)
 		if (ran == 1):
