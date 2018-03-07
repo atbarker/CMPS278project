@@ -58,10 +58,11 @@ def random_update(conn):
 	cls = choose_class()
 	name = choose_name()
 	hp = random.randint(1, 30)
+	hp2 = random.randint(1, 30)
 	lvl = random.randint(1, 21)
 	try:
 		c = conn.cursor()
-		c.execute("UPDATE characters SET hp = %d WHERE name = %s" % (hp, name))
+		c.execute("UPDATE characters SET hp = %d WHERE hp = %d" % (hp, hp2))
 		conn.commit()
 	except:
 		print "Update failed"
