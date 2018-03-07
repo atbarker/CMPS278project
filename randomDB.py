@@ -1,6 +1,7 @@
 import sqlite3
 import random
 import time
+import os
 
 def choose_class():
 	rand = random.randint(1, 9)
@@ -60,9 +61,22 @@ def random_update(conn):
 	hp = random.randint(1, 30)
 	hp2 = random.randint(1, 30)
 	lvl = random.randint(1, 21)
+	lvl2 = random.randint(1,21)
+	alive = random.randint(1,3)
+	updateType = random.randint(1,4)
+	query = ""
 	try:
 		c = conn.cursor()
-		c.execute("UPDATE characters SET hp = %d WHERE hp = %d" % (hp, hp2))
+		if(updateType == 1):
+			query = "UPDATE characters SET hp = %d WHERE hp = %d" % (hp, hp2)
+		elif(updateType == 2):
+			newlevel = 1
+			if(lvl2 <= 10):
+				newlevel = -1
+			query = "UPDATE characters SET lvl = %d WHERE lvl = %d" % (lvl + newlevel, lvl)
+		elif(updateType == 3):
+			query = "UPDATE characters SET alive = %s WHERE hp = %d" % ("no", hp)
+		c.execute(query)
 		conn.commit()
 	except:
 		print "Update failed"
