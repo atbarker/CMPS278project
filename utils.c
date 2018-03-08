@@ -34,7 +34,47 @@ struct frame{
     uint32_t checksum2;
 }__attribute__((packed));
 
-int readPage(int filedesc, struct WALheader *head, struct frame *frme){
+void hex_dump(char *label, void *addr, int len){
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+
+    if(label != NULL){
+        printf("%s:\n", label);
+    }
+    if(len == 0){
+        printf("no length specified\n");
+	return;
+    }
+    if(len < 0){
+        printf("negative length\n");
+	return;
+    }
+
+    for(i = 0; i < len; i++){
+        if((i%16) == 0){
+            if(i != 0){
+                printf(" %s\n", buff);
+            }
+            printf(" %04x ", i);
+        }
+        printf(" %02x", pc[i]);
+ 
+        if((pc[i] < 0x20) || (pc[i] > 0x7e)){
+            buff[i % 16] = '.';
+        }else{
+            buff[i % 16] = pc[i];
+        }
+        buff[(i % 16) + 1] = "\0";
+    }
+    while ((i%16) != 0){
+        printf("  ");
+        i++;
+    }
+    printf(" %s\n", buff);
+}
+
+int read_page(int filedesc, struct WALheader *head, struct frame *frme){
     void *page_contents;
     uint32_t *big = malloc(FRAME_SIZE);
 
@@ -62,7 +102,8 @@ int readPage(int filedesc, struct WALheader *head, struct frame *frme){
         return -1;
     }
 
-    close(filedesc);
+    hex_dump("page 1", page_contents, head->page_size);
+
     return 0;
 }
 
@@ -102,6 +143,8 @@ int main(){
     printf("checksum1: %x\n", head->checksum2);
     
     free(bigEndian);
-    readPage(filedesc, head, frame1);
+    read_page(filedesc, head, frame1);
+
+    close(filedesc);
     return 0;
 }
