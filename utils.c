@@ -34,22 +34,31 @@ struct frame{
     uint32_t checksum2;
 }__attribute__((packed));
 
-int readPage(int filedesc, struct WALheader *head, struct frame *frame1){
+int readPage(int filedesc, struct WALheader *head, struct frame *frme){
     void *page_contents;
+    uint32_t *big = malloc(FRAME_SIZE);
 
-    if(!read(filedesc,frame1, FRAME_SIZE)){
+    if(!read(filedesc, big, FRAME_SIZE)){
         return -1;
     }
-    printf("Page number: %d\n", frame1->page_number);
-    printf("Size in pages: %d\n", frame1->size_in_pages);
-    printf("Salt1: %d\n", frame1->salt1);
-    printf("Salt2: %d\n", frame1->salt2);
-    printf("Checksum1: %d\n", frame1->checksum1);
-    printf("Checksum2: %d\n", frame1->checksum2);
+
+    frme->page_number = be32toh(big[0]);
+    frme->size_in_pages = be32toh(big[1]);
+    frme->salt1 = be32toh(big[2]);
+    frme->salt2 = be32toh(big[3]);
+    frme->checksum1 = be32toh(big[4]);
+    frme->checksum2 = be32toh(big[5]);    
+
+    printf("Page number: %x\n", frme->page_number);
+    printf("Size in pages: %x\n", frme->size_in_pages);
+    printf("Salt1: %x\n", frme->salt1);
+    printf("Salt2: %x\n", frme->salt2);
+    printf("Checksum1: %x\n", frme->checksum1);
+    printf("Checksum2: %x\n", frme->checksum2);
 
     page_contents = malloc(head->page_size);
 
-    if(!read(filedesc,frame1, head->page_size)){
+    if(!read(filedesc,page_contents, head->page_size)){
         return -1;
     }
 
@@ -83,7 +92,7 @@ int main(){
     head->checksum1 = be32toh(bigEndian[6]);
     head->checksum2 = be32toh(bigEndian[7]);
 
-    printf("Signature: %x\n", head->signature);
+    //printf("Signature: %x\n", head->signature);
     printf("Version: %x\n", head->version);
     printf("page_size: %x\n", head->page_size);
     printf("sequence: %x\n", head->sequence);
@@ -91,7 +100,8 @@ int main(){
     printf("salt2: %x\n", head->salt2);
     printf("checksum1: %x\n", head->checksum1);
     printf("checksum1: %x\n", head->checksum2);
-
+    
+    free(bigEndian);
     readPage(filedesc, head, frame1);
     return 0;
 }
