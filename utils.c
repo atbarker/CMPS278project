@@ -89,7 +89,7 @@ void* read_page(int filedesc, struct WALheader *head, struct frame_header *frme)
     return page_contents;
 }
 
-struct wal_file * read_wal(char* filename){
+extern struct wal_file* read_wal(char* filename){
 
     struct WALheader *head = malloc(HEADER_SIZE);
     struct frame_header *frame1 = malloc(FRAME_SIZE);

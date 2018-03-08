@@ -41,6 +41,6 @@ struct wal_file{
 void hex_dump(char *label, void *addr, int len);
 
 //read the WAL file into memory
-struct wal_file * read_wal(char* filename);
+struct wal_file* read_wal(char* filename);
 
 #endif

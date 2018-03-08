@@ -15,6 +15,6 @@
  *argv[4] WAL file
  */
 int main(int argc, char *argv[]){
-    void *memory;
+    struct wal_file *log = read_wal("walbackup");
     return 0;
 }
