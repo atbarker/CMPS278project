@@ -1,4 +1,4 @@
 all:
-	gcc -o rollback utils.c
+	gcc -o rollback main.c
 clean:
 	rm *.o rollback

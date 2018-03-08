@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include "rollback.h"
+#include "utils.h"
 
 void* rollback_worker(void *args){
     struct thread_args *td_args = args;
