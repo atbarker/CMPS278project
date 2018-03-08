@@ -78,6 +78,8 @@ int read_page(int filedesc, struct WALheader *head, struct frame *frme){
     void *page_contents;
     uint32_t *big = malloc(FRAME_SIZE);
 
+    printf("Current Offset: %lu bytes\n", lseek(filedesc, 0, SEEK_CUR));
+
     if(!read(filedesc, big, FRAME_SIZE)){
         return -1;
     }
@@ -135,7 +137,7 @@ int main(){
 
     //printf("Signature: %x\n", head->signature);
     printf("Version: %x\n", head->version);
-    printf("page_size: %x\n", head->page_size);
+    printf("page_size: %u bytes\n", head->page_size);
     printf("sequence: %x\n", head->sequence);
     printf("salt1: %x\n", head->salt1);
     printf("salt2: %x\n", head->salt2);

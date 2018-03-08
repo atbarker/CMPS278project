@@ -19,6 +19,7 @@ class WAL():
 			FRAME = ">LLLLLL"
 			size = struct.calcsize(FRAME)
 			data = self.f.read(size)
+                        print self.f.tell()
 			if (len(data)) == 0:
 				break
 
