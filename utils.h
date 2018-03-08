@@ -1,3 +1,7 @@
+/*Functions for reading in files, printing, and other misc tasks
+ *
+ */
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -33,7 +37,10 @@ struct wal_file{
     struct frame **frames;
 };
 
+//perform a hex dump
 void hex_dump(char *label, void *addr, int len);
+
+//read the WAL file into memory
 struct wal_file * read_wal(char* filename);
 
 #endif
