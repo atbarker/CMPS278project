@@ -12,10 +12,24 @@
 /*
  *argv[0] program name
  *argv[1] time desired
- *argv[2] DB file
- *argv[3] new db file 
- *argv[4] WAL file
  */
+
+//do random population for a certain amount of time
+int populate_db(){
+
+    return 0;
+}
+
+int write_new_db(){
+    return 0;
+}
+
 int main(int argc, char *argv[]){
+
+    static DB *dbp = NULL;
+
+    while(true){
+
+    }
     return 0;
 }
