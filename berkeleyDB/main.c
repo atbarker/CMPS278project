@@ -6,6 +6,9 @@
 #include <sys/types.h>
 #include <db.h>
 
+#include "rollback.h"
+#include "utils.h"
+
 /*
  *argv[0] program name
  *argv[1] time desired
