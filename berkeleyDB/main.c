@@ -65,7 +65,7 @@ struct character* create_character(char* name, char* class, int hp, int alive, i
 
 struct character* create_random_character(){
     struct character *ch = malloc(sizeof(struct character));
-    int class;
+    int class = rand() % 12 + 1;
     ch->alive = 1;
     ch->lvl = 1;
     ch->hp = rand() % 15 + 1;
@@ -85,7 +85,7 @@ struct character* create_random_character(){
             ch->class = "thief";
             break;
     }
-    int name;
+    int name = rand() % 12 + 1;
     switch(name){
         case 1: ch->name = "brian"; break;
         case 2: ch->name = "dan"; break;
@@ -112,19 +112,21 @@ struct character* create_random_character(){
 int populate_db(int trans, DB *dbp){
     int i;
     DBT key, data;
+    int ret;
 
     memset(&key, 0, sizeof(DBT));
-    memset(&key, 0, sizeof(DBT));
+    memset(&data, 0, sizeof(DBT));
 
     for(i=0; i<trans; i++){
         key.data = next_available_id;
         key.size = sizeof(int);
         data.data = create_random_character();
         data.size = sizeof(struct character);
-        if(dbp->put(dbp, NULL, &key, &data, 0)  == 0){
-            fprintf(stderr, "Character stored");
+        if((ret = dbp->put(dbp, NULL, &key, &data, 0))  == 0){
+            fprintf(stderr, "Character stored\n");
         }else{
             fprintf(stderr, "character populate failed\n");
+            dbp->err(dbp, ret, "DB->put");
         }
     }
     return 0;
@@ -140,18 +142,20 @@ int main(int argc, char *argv[]){
     static DB *dbp = NULL;
     DBT key, data;
     DBC *cursor = NULL;
-    int fill = 0;
+    int fill = 1;
     random_index = 0;
     current_id = 0;
     int transactions = 1024;
     int ret;
+    
+    db_create(&dbp, NULL, 0);
 
-    if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0) != 0 ){
+    if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0777) != 0 ){
 	fprintf(stderr, "Database not found, or could not be opened, creating new one\n");
-	if(db_create(&dbp, NULL, 0)){
-            fill = 1;
-            ret = dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0);
-        }
+	//if(db_create(&dbp, NULL, 0)){
+        //    fill = 1;
+        //    ret = dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0);
+        //}
     };
 
     if(dbp->cursor(dbp, NULL, &cursor, 0) != 0 ){
@@ -163,7 +167,9 @@ int main(int argc, char *argv[]){
     memset(&data, 0, sizeof(DBT));
 
     if(fill == 1){
+        fprintf(stdout, "populating DB\n");
         populate_db(transactions, dbp);
+        fprintf(stdout, "done\n");
     }
 
     while(TRUE){
