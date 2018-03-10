@@ -120,14 +120,16 @@ int populate_db(int trans, DB *dbp){
     for(i=0; i<trans; i++){
         key.data = next_available_id;
         key.size = sizeof(int);
-        data.data = create_random_character();
+        struct character *ch = create_random_character();
+        data.data = ch;
         data.size = sizeof(struct character);
         if((ret = dbp->put(dbp, NULL, &key, &data, 0))  == 0){
-            fprintf(stderr, "Character stored\n");
+            //fprintf(stderr, "Character stored\n");
         }else{
             fprintf(stderr, "character populate failed\n");
             dbp->err(dbp, ret, "DB->put");
         }
+        free(ch);
     }
     return 0;
 }
@@ -171,9 +173,8 @@ int main(int argc, char *argv[]){
         populate_db(transactions, dbp);
         fprintf(stdout, "done\n");
     }
-
-    while(TRUE){
-
-    }
+    //while(TRUE){
+        dbp->close(dbp, 0);
+    //}
     return 0;
 }
