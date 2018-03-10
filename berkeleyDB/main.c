@@ -1,6 +1,7 @@
 //creates and populates a database for DND characters using berkeleyDB
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -14,13 +15,13 @@
 #define LOG "characters.db-log"
 
 static int current_id;
-static int random[1024];
-static random_index;
+static int randint[1024];
+static int random_index;
 
 struct character{
     int id;
-    char name[20];
-    char class[20];
+    char *name;
+    char *class;
     int hp;
     int alive;
     int lvl;
@@ -32,18 +33,22 @@ int next_available_id(){
     return new_id;
 }
 
-int generate_random(){
+int generate_random(int d){
+    int i;
+    for(i = 0; i < 1024; i++){
+        randint[i] = rand() % d + 1;
+    }
     return 0;
 }
 
 int select_random(){
     if(random_index < 1023){
         random_index++;
-        return random[random_index];
+        return randint[random_index];
     }else if(random_index >= 1024){
         random_index = 0;
-        generate_random();
-        return random[random_index];
+        generate_random(100);
+        return randint[random_index];
     }
 }
 
@@ -58,7 +63,48 @@ struct character* create_character(char* name, char* class, int hp, int alive, i
     return ch;
 }
 
-struct character create_random_character(){
+struct character* create_random_character(){
+    struct character *ch = malloc(sizeof(struct character));
+    int class;
+    ch->alive = 1;
+    ch->lvl = 1;
+    ch->hp = rand() % 15 + 1;
+    switch(class){
+        case 1: ch->class = "fighter"; break;
+        case 2: ch->class = "barbarian"; break;
+        case 3: ch->class = "bard"; break;
+        case 4: ch->class = "cleric"; break;
+        case 5: ch->class = "druid"; break;
+        case 6: ch->class = "paladin"; break;
+        case 7: ch->class = "ranger"; break;
+        case 8: ch->class = "wizard"; break;
+        case 10: ch->class = "warlock"; break;
+        case 11: ch->class = "sorcerer"; break;
+        case 12: ch->class = "monk"; break;
+        default:
+            ch->class = "thief";
+            break;
+    }
+    int name;
+    switch(name){
+        case 1: ch->name = "brian"; break;
+        case 2: ch->name = "dan"; break;
+        case 3: ch->name = "bob"; break;
+        case 4: ch->name = "stanely"; break;
+        case 5: ch->name = "aidan"; break;
+        case 6: ch->name = "feanor"; break;
+        case 7: ch->name = "fingolfin"; break;
+        case 8: ch->name = "fingon"; break;
+        case 9: ch->name = "finwe"; break;
+        case 10: ch->name = "elendil"; break;
+        case 11: ch->name = "isildur"; break;
+        case 12: ch->name = "ancalagon"; break;
+        default:
+            ch->name = " ";
+            break;
+    }
+
+    return ch;
 
 }
 
@@ -74,7 +120,7 @@ int populate_db(int trans, DB *dbp){
         key.data = next_available_id;
         key.size = sizeof(int);
         data.data = create_random_character();
-        data.size = sizeof(character);
+        data.size = sizeof(struct character);
         if(dbp->put(dbp, NULL, &key, &data, 0)  == 0){
             fprintf(stderr, "Character stored");
         }else{
@@ -98,16 +144,17 @@ int main(int argc, char *argv[]){
     random_index = 0;
     current_id = 0;
     int transactions = 1024;
+    int ret;
 
     if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0) != 0 ){
 	fprintf(stderr, "Database not found, or could not be opened, creating new one\n");
-	if(db_create(dbp, NULL, 0)){
+	if(db_create(&dbp, NULL, 0)){
             fill = 1;
             ret = dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0);
         }
     };
 
-    if(dbp->cursor(dpb, NULL, &cursor, 0) != 0 ){
+    if(dbp->cursor(dbp, NULL, &cursor, 0) != 0 ){
         fprintf(stderr, "Cursor could not be set\n");
 	return -1;
     }
@@ -119,7 +166,7 @@ int main(int argc, char *argv[]){
         populate_db(transactions, dbp);
     }
 
-    while(true){
+    while(TRUE){
 
     }
     return 0;

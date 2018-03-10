@@ -3,7 +3,7 @@ EXE := rollback
 HEADERS := $(wildcard *.h)
 
 $(EXE):$(OBJ)
-	gcc -o $@ $(OBJ)
+	gcc -o $@ $(OBJ) -ldb
 
 $(OBJ):$(HEADERS)
 
