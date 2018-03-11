@@ -144,15 +144,20 @@ int main(int argc, char *argv[]){
     static DB *dbp = NULL;
     DBT key, data;
     DBC *cursor = NULL;
+    DB_ENV *env;
     int fill = 1;
     random_index = 0;
     current_id = 0;
     int transactions = 1024;
     int ret;
+ 
+    db_env_create(&env, 0);
+ 
+    env->open(env, NULL, DB_INIT_LOG | DB_INIT_MPOOL | DB_CREATE | DB_THREAD, 0644);
     
-    db_create(&dbp, NULL, 0);
+    db_create(&dbp, env, 0);
 
-    if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0777) != 0 ){
+    if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0644) != 0 ){
 	fprintf(stderr, "Database not found, or could not be opened, creating new one\n");
 	//if(db_create(&dbp, NULL, 0)){
         //    fill = 1;
@@ -175,6 +180,7 @@ int main(int argc, char *argv[]){
     }
     //while(TRUE){
         dbp->close(dbp, 0);
+        env->close(env, 0);
     //}
     return 0;
 }

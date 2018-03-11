@@ -10,4 +10,8 @@ all:
 clean:
 	rm *.o rollback
 
+spotless:
+	rm *.o rollback
+	rm *.db __db.* log.* 
+
 .PHONY: clean
