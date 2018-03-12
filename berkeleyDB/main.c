@@ -134,15 +134,22 @@ int populate_db(int trans, DB *dbp){
     return 0;
 }
 
-int rollback_to_timestamp(char* new_db_name){
-    return 0;
+DB* rollback_to_timestamp(DB_ENV *env, DB *dbp, char* new_db_name, int parallel){
+    //if we want to run a test in parallel, otherwise run it single threaded
+    //in a linear manner.
+    if(parallel){
+
+    }else{
+
+    }
+    return NULL;
 }
 
 
 int main(int argc, char *argv[]){
 
     static DB *dbp = NULL;
-    DBT key, data;
+    //DBT key, data;
     DBC *cursor = NULL;
     DB_ENV *env;
     int fill = 1;
@@ -150,19 +157,25 @@ int main(int argc, char *argv[]){
     current_id = 0;
     int transactions = 1024;
     int ret;
+     
+    if(ret = db_env_create(&env, 0)){
+        fprintf(stderr, "Couldn't create db environment\n");
+        return -1;
+    }
  
-    db_env_create(&env, 0);
- 
-    env->open(env, NULL, DB_INIT_LOG | DB_INIT_MPOOL | DB_CREATE | DB_THREAD, 0644);
+    if(env->open(env, NULL, DB_INIT_LOG | DB_INIT_MPOOL | DB_CREATE | DB_THREAD, 0644)){
+        fprintf(stderr, "Couldn't open db environement\n");
+        return -1;
+    }
     
-    db_create(&dbp, env, 0);
+    if(db_create(&dbp, env, 0)){
+        fprintf(stderr, "Couldn't create database\n");
+        return -1;
+    }
 
     if(dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0644) != 0 ){
 	fprintf(stderr, "Database not found, or could not be opened, creating new one\n");
-	//if(db_create(&dbp, NULL, 0)){
-        //    fill = 1;
-        //    ret = dbp->open(dbp, NULL, DATABASE, NULL, DB_BTREE, DB_CREATE, 0);
-        //}
+	return -1;
     };
 
     if(dbp->cursor(dbp, NULL, &cursor, 0) != 0 ){
@@ -170,14 +183,15 @@ int main(int argc, char *argv[]){
 	return -1;
     }
 
-    memset(&key, 0, sizeof(DBT));
-    memset(&data, 0, sizeof(DBT));
+    //memset(&key, 0, sizeof(DBT));
+    //memset(&data, 0, sizeof(DBT));
 
     if(fill == 1){
         fprintf(stdout, "populating DB\n");
         populate_db(transactions, dbp);
         fprintf(stdout, "done\n");
     }
+    rollback_parallel(0, 0, 5);
     //while(TRUE){
         dbp->close(dbp, 0);
         env->close(env, 0);

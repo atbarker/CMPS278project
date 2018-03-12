@@ -3,15 +3,15 @@ EXE := rollback
 HEADERS := $(wildcard *.h)
 
 all:
-	gcc -g -o rollback rollback.c utils.c main.c -ldb
+	gcc -g -o rollback rollback.c utils.c main.c -ldb -pthread
 
 #$(OBJ):$(HEADERS)
 
 clean:
-	rm *.o rollback
+	rm rollback
 
 spotless:
-	rm *.o rollback
+	rm rollback
 	rm *.db __db.* log.* 
 
 .PHONY: clean
