@@ -137,10 +137,15 @@ int populate_db(int trans, DB *dbp){
 DB* rollback_to_timestamp(DB_ENV *env, DB *dbp, char* new_db_name, int parallel){
     //if we want to run a test in parallel, otherwise run it single threaded
     //in a linear manner.
+    int records = 0;
+    int time = 0;
+    int partitions = 1;
+    int rollback_lsn = 0;
+
     if(parallel){
-
+        rollback_parallel(records, time, partitions, rollback_lsn);
     }else{
-
+        rollback_linear(rollback_lsn);
     }
     return NULL;
 }
@@ -191,7 +196,6 @@ int main(int argc, char *argv[]){
         populate_db(transactions, dbp);
         fprintf(stdout, "done\n");
     }
-    rollback_parallel(0, 0, 5);
     //while(TRUE){
         dbp->close(dbp, 0);
         env->close(env, 0);

@@ -32,7 +32,7 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
-void* rollback_linear(){
+void* rollback_linear(int rollback_lsn){
     return NULL;
 } 
 
@@ -45,7 +45,7 @@ void* merge_partitions(){
 //a page is only valid if the salts match the header 
 //checksums must match
 //roll up my log in parallel chunks
-void* rollback_parallel(int number_records, int time_quanta, int number_partitions){
+void* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn){
     
     pthread_t *threads;
     int i;
