@@ -10,8 +10,8 @@ struct rollback_summary{
     struct character **diffs;
 };
 
-struct rollback_summary* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env);
+struct rollback_summary* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env, struct db_context *context);
 
-struct rollback_summary* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn);
+struct rollback_summary* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn, struct db_context *context);
 
 #endif
