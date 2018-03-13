@@ -1,4 +1,4 @@
-//creates and populates a database for DND characters using berkeleyDB
+//createZZs and populates a database for DND characters using berkeleyDB
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -101,7 +101,7 @@ struct character* create_random_character(){
 }
 
 //populate the database with a certain number of random transactions
-int populate_db(int trans, DB *dbp, DB_ENV *env){
+int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
     int i;
     DBT key, data;
     int ret;
@@ -110,15 +110,39 @@ int populate_db(int trans, DB *dbp, DB_ENV *env){
     memset(&data, 0, sizeof(DBT));
 
     for(i=0; i<trans; i++){
-        key.data = next_available_id;
+        DB_LSN *lsn = malloc(sizeof(DB_LSN));
+        struct db_log_record *record = malloc(sizeof(struct db_log_record));;
+        DBT log_data;
+        key.data = &context->next_available_id;
         key.size = sizeof(int);
         struct character *ch = create_random_character();
         data.data = ch;
         data.size = sizeof(struct character);
-        if(insert(dbp, env, &key, &data)){
+        if((ret = dbp->put(dbp, NULL, &key, &data, 0)) != 0){
+            fprintf(stderr, "Record retrieve failed\n");
+            dbp->err(dbp, ret, "DB->put");
+        }
+
+        //populate the record
+        record->time = time(NULL);
+        record->XID = 0;
+        record->type = 0;
+        record->key = context->next_available_id;
+        record->offset = 0;
+        record->before = NULL;
+        record->after = ch;
+      
+        log_data.data = record;
+        log_data.size = sizeof(struct db_log_record);
+        ret = env->log_put(env, lsn, &log_data, 0);
+        if(ret){
+            fprintf(stderr, "Insert log record failed\n");
             return -1;
-        } 
-        free(ch);
+        }
+        context->next_available_id++;
+        free(lsn);
+        free(record); 
+        free(ch); 
     }
     return 0;
 }
@@ -142,13 +166,16 @@ DB* rollback_to_timestamp(DB_ENV *env, DB *dbp, char* new_db_name, int parallel,
 
 int main(int argc, char *argv[]){
 
-    static DB *dbp = NULL;
-    //DBT key, data;
+    struct db_context *context = malloc(sizeof(struct db_context));
+    DB *dbp = NULL;
     DBC *cursor = NULL;
-    DB_ENV *env;
+    DB_ENV *env = NULL;
     int fill = 1;
     random_index = 0;
-    current_id = 0;
+
+    context->current_id = 0;
+    context->next_available_id = 0;
+
     int transactions = 1024;
     int ret;
      
@@ -177,17 +204,22 @@ int main(int argc, char *argv[]){
 	return -1;
     }
 
-    //memset(&key, 0, sizeof(DBT));
-    //memset(&data, 0, sizeof(DBT));
 
     if(fill == 1){
         fprintf(stdout, "populating DB\n");
-        populate_db(transactions, dbp, env);
+        populate_db(transactions, dbp, env, context);
         fprintf(stdout, "done\n");
     }
+
+    struct character *ch = create_random_character();
+
+    insert(dbp, env, ch, context);
+
     //while(TRUE){
         dbp->close(dbp, 0);
         env->close(env, 0);
     //}
+    free(ch);
+    free(context);
     return 0;
 }
