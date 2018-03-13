@@ -3,7 +3,7 @@ EXE := rollback
 HEADERS := $(wildcard *.h)
 
 all:
-	gcc -g -o rollback rollback.c utils.c main.c -ldb -pthread
+	gcc -g -o rollback rollback.c utils.c simpledb.c main.c -ldb -pthread
 
 #$(OBJ):$(HEADERS)
 
