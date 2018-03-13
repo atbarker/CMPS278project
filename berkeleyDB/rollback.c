@@ -32,7 +32,7 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
-void* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env){
+struct rollback_summary* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env){
     DB_LOGC *cursor;
     if(env->log_cursor(env, &cursor, 0)){
         fprintf(stderr, "Error creating database cursor\n");
@@ -50,7 +50,7 @@ void* merge_partitions(){
 //a page is only valid if the salts match the header 
 //checksums must match
 //roll up my log in parallel chunks
-void* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn){
+struct rollback_summary* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn){
     
     pthread_t *threads;
     int i;

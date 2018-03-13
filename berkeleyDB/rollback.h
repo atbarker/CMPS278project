@@ -2,10 +2,16 @@
 #define ROLLBACK_H
 
 #include "utils.h"
+#include "simpledb.h"
 #include <db.h>
 
-void* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env);
+struct rollback_summary{
+    DB_LSN target;
+    struct character **diffs;
+};
 
-void* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn);
+struct rollback_summary* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env);
+
+struct rollback_summary* rollback_parallel(int number_records, int time_quanta, int number_partitions, int rollback_lsn);
 
 #endif
