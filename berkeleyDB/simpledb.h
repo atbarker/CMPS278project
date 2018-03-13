@@ -7,7 +7,7 @@
 struct db_context{
     DB *dbp;
     DB_ENV *env;
-    DB_LSN **lsn_array;
+    DB_LSN recent_lsn;
     int number_lsn;
     int current_id;
     int next_available_id;

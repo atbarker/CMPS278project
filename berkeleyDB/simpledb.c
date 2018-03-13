@@ -45,7 +45,8 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
         fprintf(stderr, "Insert log record failed\n");
         return -1;
     }
-
+    
+    context->recent_lsn = *lsn;
     context->next_available_id++;
 
     free(lsn);
@@ -89,7 +90,10 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     if(ret){
         fprintf(stderr, "Insert log record failed\n");
         return -1;
-    }    
+    }
+
+    context->recent_lsn = *lsn;
+    
     free(lsn);
     free(record);
     return 0;
@@ -129,7 +133,10 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     if(ret){
         fprintf(stderr, "Insert log record failed\n");
         return -1;
-    }    
+    }
+    
+    context->recent_lsn = *lsn;
+    
     free(lsn);
     free(record);
     return 0;
@@ -175,6 +182,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
         return -1;
     }
 
+    context->recent_lsn = *lsn;
     context->next_available_id++;
 
     free(lsn);
