@@ -32,7 +32,12 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
-void* rollback_linear(int rollback_lsn){
+void* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env){
+    DB_LOGC *cursor;
+    if(env->log_cursor(env, &cursor, 0)){
+        fprintf(stderr, "Error creating database cursor\n");
+        return NULL;
+    }
     return NULL;
 } 
 

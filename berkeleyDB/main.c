@@ -18,15 +18,6 @@ static int current_id;
 static int randint[1024];
 static int random_index;
 
-struct character{
-    int id;
-    char *name;
-    char *class;
-    int hp;
-    int alive;
-    int lvl;
-}__attribute__((packed));
-
 int next_available_id(){
     int new_id = current_id;
     current_id++;
@@ -108,8 +99,47 @@ struct character* create_random_character(){
 
 }
 
+int insert(DB *dbp, DB_ENV *env, DBT *key, DBT *data){
+    int ret;
+    if((ret = dbp->put(dbp, NULL, key, data, DB_NOOVERWRITE)) != 0){
+       fprintf(stderr, "Record insert failed\n");
+       dbp->err(dbp, ret, "DB->put");
+       return -1;
+    }    
+    return 0;
+}
+
+int retrieve(DB *dbp, DB_ENV *env, DBT *key, DBT *data){
+    int ret;
+    if((ret = dbp->get(dbp, NULL, key, data, 0)) != 0){
+        fprintf(stderr, "Record retrieve failed\n");
+        dbp->err(dbp, ret, "DB->get");
+    }
+    return 0;
+}
+
+int delete(DB *dbp, DB_ENV *env, DBT *key){
+    int ret;
+    if((ret = dbp->del(dbp, NULL, key, 0)) != 0){
+       fprintf(stderr, "Record delete failed\n");
+       dbp->err(dbp, ret, "DB->del");
+       return -1;
+    }
+    return 0;
+}
+
+int update(DB *dbp, DB_ENV *env, DBT *key, DBT *data){
+    int ret;
+    if((ret = dbp->put(dbp, NULL, key, data, 0)) != 0){
+        fprintf(stderr, "Record update failed\n");
+        dbp->err(dbp, ret, "DB->put");
+        return -1;
+    }
+    return 0;
+}
+
 //populate the database with a certain number of random transactions
-int populate_db(int trans, DB *dbp){
+int populate_db(int trans, DB *dbp, DB_ENV *env){
     int i;
     DBT key, data;
     int ret;
@@ -123,12 +153,9 @@ int populate_db(int trans, DB *dbp){
         struct character *ch = create_random_character();
         data.data = ch;
         data.size = sizeof(struct character);
-        if((ret = dbp->put(dbp, NULL, &key, &data, 0))  == 0){
-            //fprintf(stderr, "Character stored\n");
-        }else{
-            fprintf(stderr, "character populate failed\n");
-            dbp->err(dbp, ret, "DB->put");
-        }
+        if(insert(dbp, env, &key, &data)){
+            return -1;
+        } 
         free(ch);
     }
     return 0;
@@ -145,7 +172,7 @@ DB* rollback_to_timestamp(DB_ENV *env, DB *dbp, char* new_db_name, int parallel,
     if(parallel){
         rollback_parallel(records, time, partitions, rollback_lsn);
     }else{
-        rollback_linear(rollback_lsn);
+        rollback_linear(lsn, dbp, env);
     }
     return NULL;
 }
@@ -193,7 +220,7 @@ int main(int argc, char *argv[]){
 
     if(fill == 1){
         fprintf(stdout, "populating DB\n");
-        populate_db(transactions, dbp);
+        populate_db(transactions, dbp, env);
         fprintf(stdout, "done\n");
     }
     //while(TRUE){
