@@ -44,6 +44,7 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     struct rollback_summary *sum = malloc(sizeof(struct rollback_summary));
     sum->diffs = malloc(sizeof(struct character) * 6);
     int i;
+    int rollback_count;
 
     //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
@@ -61,14 +62,23 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     //printf("grabbing first log record\n");
     cursor->get(cursor, last_lsn, log_contents, DB_LAST);
     log = log_contents->data;
-    //printf("timestamp: %lu \n", log->time);
+    printf("timestamp: %lu \n", log->time);
+    printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
     //grab each log record starting from that LSN
     for(i = 1; i < 6; i++){
         //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
+        //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
-        sum->diffs[i] = log->before;
+
+        //need a more robust data structure in order for it to work
+        //will check each individual entry, the type of transaction, and the contents
+        //update to the closest version
+        if(1){
+            sum->diffs[rollback_count] = log->before;
+            rollback_count++;
+        }
     }
    
     //cleanup
