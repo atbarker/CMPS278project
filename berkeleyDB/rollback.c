@@ -6,7 +6,9 @@
 #include <assert.h>
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
 #include "rollback.h"
+#include "simpledb.h"
 #include "utils.h"
 
 struct thread_args {
@@ -32,12 +34,39 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
-struct rollback_summary* rollback_linear(DB_LSN lsn, DB *dbp, DB_ENV *env, struct db_context *context){
+struct rollback_summary* rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
+
     DB_LOGC *cursor;
+    DB_LSN *last_lsn = malloc(sizeof(DB_LSN));
+    DBT *log_contents = malloc(sizeof(DBT) * 6);
+    int i;
+
+    //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
         fprintf(stderr, "Error creating database cursor\n");
         return NULL;
     }
+
+    //have to initialize the objects
+    memset(last_lsn, 0, sizeof(DB_LSN));
+    memset(log_contents, 0, sizeof(DBT));
+    log_contents->data = NULL;
+    log_contents->size = sizeof(struct db_log_record);
+ 
+    //scan from the most recent log record to the correct timestamp or LSN
+    printf("grabbing first log record\n");
+    cursor->get(cursor, last_lsn, log_contents, DB_LAST);
+
+    //grab each log record starting from that LSN
+    for(i = 1; i < 6; i++){
+        printf("Grabbing recent log %d\n", i);
+        cursor->get(cursor, last_lsn, log_contents, DB_PREV);
+    }
+
+    //cleanup
+    cursor->close(cursor, 0);
+    free(log_contents);
+    free(last_lsn);
     return NULL;
 } 
 

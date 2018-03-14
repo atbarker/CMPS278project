@@ -147,18 +147,19 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
     return 0;
 }
 
-DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char* new_db_name, int parallel, DB_LSN lsn){
+DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char* new_db_name, int parallel, DB_LSN *lsn){
     //if we want to run a test in parallel, otherwise run it single threaded
     //in a linear manner.
     int records = 0;
     int time = 0;
     int partitions = 1;
     int rollback_lsn = 1;
+    struct rollback_summary *sum = NULL;
 
     if(parallel){
-        rollback_parallel(records, time, partitions, rollback_lsn, context);
+        sum = rollback_parallel(records, time, partitions, rollback_lsn, context);
     }else{
-        rollback_linear(lsn, dbp, env, context);
+        sum = rollback_linear(NULL, dbp, env, context);
     }
     return NULL;
 }
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]){
 
     struct character *ch = create_random_character();
 
-    insert(dbp, env, ch, context);
+    rollback_to_timestamp(context, env, dbp, "bort", 0, NULL);
 
     //while(TRUE){
         dbp->close(dbp, 0);
