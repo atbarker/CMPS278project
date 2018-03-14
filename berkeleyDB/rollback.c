@@ -34,11 +34,15 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
-struct rollback_summary* rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
+struct rollback_summary* 
+rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
 
     DB_LOGC *cursor;
     DB_LSN *last_lsn = malloc(sizeof(DB_LSN));
     DBT *log_contents = malloc(sizeof(DBT) * 6);
+    struct db_log_record *log = NULL;
+    struct rollback_summary *sum = malloc(sizeof(struct rollback_summary));
+    sum->diffs = malloc(sizeof(struct character) * 6);
     int i;
 
     //create the cursor
@@ -54,24 +58,28 @@ struct rollback_summary* rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, stru
     log_contents->size = sizeof(struct db_log_record);
  
     //scan from the most recent log record to the correct timestamp or LSN
-    printf("grabbing first log record\n");
+    //printf("grabbing first log record\n");
     cursor->get(cursor, last_lsn, log_contents, DB_LAST);
+    log = log_contents->data;
+    //printf("timestamp: %lu \n", log->time);
 
     //grab each log record starting from that LSN
     for(i = 1; i < 6; i++){
-        printf("Grabbing recent log %d\n", i);
+        //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
+        log = log_contents->data;
+        sum->diffs[i] = log->before;
     }
-
+   
     //cleanup
     cursor->close(cursor, 0);
     free(log_contents);
     free(last_lsn);
-    return NULL;
+    return sum;
 } 
 
 //merge the partitions created by the workers
-void* merge_partitions(){
+struct rollback_summary* merge_partitions(){
     
     return NULL;
 }

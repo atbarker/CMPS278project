@@ -161,6 +161,8 @@ DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char
     }else{
         sum = rollback_linear(NULL, dbp, env, context);
     }
+    free(sum->diffs);
+    free(sum);
     return NULL;
 }
 
