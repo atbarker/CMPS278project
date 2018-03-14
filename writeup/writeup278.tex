@@ -1,7 +1,6 @@
 \documentclass{article}
-\bibliographystyle{plain}
 \usepackage{tikz}
-\usepackage{bibentry}
+
 \usepackage{multicol}
 \usepackage{enumitem}
 \usepackage{blindtext}
@@ -14,27 +13,89 @@
 \author{Austen Barker}
 \maketitle
 
-\begin{multicols}{2}
+%\begin{multicols}{1}
 
 \textbf{Abstract:} 
 \section{Introduction}
 \section{Problem}
 \section{Project}
-\subsection{Goal}
+\subsection{Goals}
+The overall goal of this project was to produce a piece of software that could roll up discrete chunks
+of the log. Then use these chunks in order to reconstruct the state of the database at any time that
+the log covered. The available period of time available for a roll up would depend on the implementation
+of the database's logging system. Chunks could be computed in parallel, depending on the locking scheme
+used by the logging system in question. Three major milestones were set in place on the project's roadmap.\\
+
+\textbf{A)} The first milestone would be a basic application that could take the log provided by a database
+and process the discrete chunks of the database based on a timestamp or log sequence number (LSN). This was 
+the "proof of concept" step to show whether or not the idea could work. This would then be compared to some
+existing logging and recovery methods such as write-ahead logging.\\
+
+\textbf{B)} The second milestone involves storing specific save points to the disk that would contain what 
+is essentially a "diff" of the database between the start and end of a log chunk. This diff would be 
+analogous to the output of the unix command "diff". Also included in this milestone is parallelized execution.
+Though that would depend on whether or not the system was implemented in a lower level language such as C/C++.\\
+
+\textbf{C)} The final milestone and coup de grace of the project would be its inclusion into an existing
+database system or the implementation of a new one. Most likely this would manifest itself in a simpler
+relational database such as SQLite. Primarily due to the small size of the source code.\\
+
+In the end a smattering of the three different milestones manifested themselves in the final product. It contained the objective of the first milestone, the parallelized element of the second and the interface with an existing database system from the third.\\
+
 \subsection{SQLite background}
+Initially the logs used for the testing of whatever form the new implementation would take were to come from a small instance of PostgreSQL. Although it became clear from the lack of easily located documentation concerning its logging infrastructure that it would not be practical to use for the initial proof of concept. This led to a transition to SQLite. A small and lightweight relational database intended for use in embedded applications such as is commonly found in web applications. A small python application was used to randomly insert, update, retrieve, and delete records in a single table at regular intervals.
+ 
+SQLite has two major logging methods. Either write-ahead logging or their own journaling methods. Both of which are disabled by default and take the form of temporary files that only exist when an active database session is open. Then disposed of when all active sessions are closed. This issue of log persistence while initially a red flag was not dissuading. This was easily fixed by simply The issues began to propogate when it became clear that neither the write-ahead logging or journaling methods stored a meaningful log sequence number or timestamp with which one could determine where to partition the log for roll up. After some consideration it was decided that in order to proceed with development using SQLite these features would have to be added to either the write-ahead or journaling code and therefore produce a custom version of SQLite.
+
+This was deemed to be an unacceptable overhead to simply produce usable log records as it was not initially obvious what needed to be modified within the source code itself. Therefore SQLite was, after a number of attempts, set aside in favor of a different, more configurable option.
+
+\subsection{BerkeleyDB background}
+The second attempt at a log source for the database took the form of BerkeleyDB. Though exceedingly minimal it provided the correct mixture of a small understandable code base, easy to use programming interface, and configurability that lent itself very well to the challenges posed by the project.
+
+BerkeleyDB presents a basic programming interface that allowed for storage of basic key/value data and a few additional features such as functions to govern logging, locking, a memory pool, and transaction management. Unlike SQLite all BerkeleyDB files are persistant even when all active sessions are closed. Databases exist within a database environment that contains the logging functionality that is necessary for the project. Arbitrary key/value pairs are stored as byte arrays and allow for easy integration with a low level programming language such as C or C++. It is for these reasons that BerkeleyDB was selected as the underlying framework upon which the rest of the project's implementation is built.
+
 \subsection{System Design}
+The database roll back system is built on top of the BerkeleyDB key/value store. 
+
+Design overview image
+
+Log record structure
+
+Linear roll back.
+
+Parallelized roll back.
+
+Roll back with save points.
+
 \subsection{Testing Database Setup}
+
+Database schema
+
+Random transaction generation and execution
+
 \subsection{Implementation}
+The log roll back system takes the form of a piece of basic middleware that is designed to interface with BerkeleyDB through the C API bindings and then presents itself as a library to user applications. The entirety of the program is implemented in C as it provided the right low level access and flexibility required to efficiently implement the structures that make up the core of the project.
+
+Database context
+
+Database records
+
+Log record management
+
+Resulting programming interface for BerkeleyDB.
+
 \section{Results}
+\subsection{Implementation Status}
+\subsection{Current Log Application Methods}
 \subsection{Linear Log Application}
 \subsection{Parallelized Log Application}
 \subsection{Time/State Restoration}
 \subsection{Current Limitations}
 \subsection{Potential Future Work}
 \section{Conclusion}
+\section{References}
 
-\bibliography{steg}
 
-\end{multicols}
+%\end{multicols}
 
 \end{document}
