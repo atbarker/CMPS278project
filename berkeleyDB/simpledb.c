@@ -36,7 +36,7 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     record->key = context->next_available_id;
     record->offset = 0;
     record->before = NULL;
-    record->after = ch;
+    //record->after = ch;
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -82,7 +82,7 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     record->key = key;
     record->offset = 0;
     record->before = NULL;
-    record->after = NULL;
+    //record->after = NULL;
 
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -125,7 +125,7 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     record->key = key;
     record->offset = 0;
     record->before = NULL;
-    record->after = NULL;
+    //record->after = NULL;
 
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -172,7 +172,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     record->key = key;
     record->offset = 0;
     record->before = NULL;
-    record->after = ch;
+    //record->after = ch;
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);

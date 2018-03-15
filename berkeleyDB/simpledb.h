@@ -30,8 +30,7 @@ struct db_log_record{
     uint32_t type;
     uint32_t key;
     uint32_t offset;
-    struct character *before;
-    struct character *after;   
+    struct character *before;   
 }__attribute__((packed));
 
 int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *context);

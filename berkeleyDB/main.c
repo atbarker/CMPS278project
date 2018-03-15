@@ -130,7 +130,7 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
         record->key = context->next_available_id;
         record->offset = 0;
         record->before = NULL;
-        record->after = ch;
+        //record->after = ch;
       
         log_data.data = record;
         log_data.size = sizeof(struct db_log_record);

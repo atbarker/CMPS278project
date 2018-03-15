@@ -10,11 +10,23 @@
 #include "rollback.h"
 #include "simpledb.h"
 #include "utils.h"
+#include <db.h>
 
 struct thread_args {
     void *mem;
     uint64_t memsize;  
 };
+
+int key_exists(struct character *ch, int records, int key){
+    int i;
+    printf("checking key\n");
+    for(i = records; i>=0; i--){
+        if(ch[i].id == key){
+            return i;
+        }
+    }
+    return 0;
+}
 
 //retrieve a batch of log records and crunch the numbers
 void* rollback_worker(void *args){
@@ -42,9 +54,11 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     DBT *log_contents = malloc(sizeof(DBT) * 6);
     struct db_log_record *log = NULL;
     struct rollback_summary *sum = malloc(sizeof(struct rollback_summary));
-    sum->diffs = malloc(sizeof(struct character) * 6);
     int i;
-    int rollback_count;
+    int rollback_count = 0;
+ 
+    sum->diffs_length = 6;
+    sum->diffs = malloc(sizeof(struct character) * 6);
 
     //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
@@ -71,12 +85,16 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
         //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
-
-        //need a more robust data structure in order for it to work
-        //will check each individual entry, the type of transaction, and the contents
-        //update to the closest version
-        if(1){
-            sum->diffs[rollback_count] = log->before;
+        int ret;
+        //represent empty struct somehow
+        if(ret = key_exists(sum->diffs, rollback_count, log->key)){
+            if(log->type == 0){
+                sum->diffs[ret] = log->before;
+            }
+        }else{
+            if(log->type == 0){
+                sum->diffs[rollback_count] = log->before;
+            }
             rollback_count++;
         }
     }

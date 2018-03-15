@@ -7,7 +7,9 @@
 
 struct rollback_summary{
     DB_LSN target;
-    struct character **diffs;
+    uint32_t diffs_length;
+    unsigned char *changed;
+    struct character *diffs;
 };
 
 struct rollback_summary* rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context);
