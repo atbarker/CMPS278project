@@ -6,10 +6,14 @@
 #define UTILS_H
 
 #include <stdint.h>
+
 #define TRUE 1
 #define FALSE 0
 
 //perform a hex dump
 void hex_dump(char *label, void *addr, int len);
+
+//xor two byte arrays
+void array_xor(unsigned char *in1, unsigned char *in2, unsigned char *out, int len);
 
 #endif

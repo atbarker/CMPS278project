@@ -50,3 +50,10 @@ void hex_dump(char *label, void *addr, int len){
     }
     printf(" %s\n", buff);
 }
+
+void array_xor(unsigned char *in1, unsigned char *in2, unsigned char *out, int len){
+    int i;
+    for(i = 0; i < len; i++){
+        out[i] = in1[i] ^ in2[i];
+    }
+}

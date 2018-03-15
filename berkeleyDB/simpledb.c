@@ -82,7 +82,6 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     record->key = key;
     record->offset = 0;
     record->data_length = sizeof(struct character);
-    //record->data = 0;
 
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -105,13 +104,21 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     struct db_log_record *record = malloc(sizeof(struct db_log_record));;
     DBT log_data;
 
-    DBT keyt;
+    DBT keyt, data;
 
     memset(&log_data, 0, sizeof(DBT));
+    memset(&data, 0, sizeof(DBT));
     memset(&keyt, 0, sizeof(DBT));    
 
     keyt.data = &key;
     keyt.size = sizeof(int);
+    data.size = sizeof(struct character);
+
+    if((ret = dbp->get(dbp, NULL, &keyt, &data, 0)) != 0){
+        fprintf(stderr, "Record retrieve for delete log failed.\n");
+        dbp->err(dbp, ret, "DB->del");
+        return -1;
+    }
 
     if((ret = dbp->del(dbp, NULL, &keyt, 0)) != 0){
        fprintf(stderr, "Record delete failed\n");
@@ -125,8 +132,7 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     record->key = key;
     record->offset = 0;
     record->data_length = sizeof(struct character);
-    //record->before = NULL;
-    //record->after = NULL;
+    memcpy(&record->data, &data.data, sizeof(struct character));
 
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -148,18 +154,26 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     DB_LSN *lsn = malloc(sizeof(DB_LSN));
     struct db_log_record *record = malloc(sizeof(struct db_log_record));;
     DBT log_data;
-    DBT keyt, data;
+    DBT keyt, data, get_data;
 
     memset(&log_data, 0, sizeof(DBT));
     memset(&data, 0, sizeof(DBT));
-    memset(&keyt, 0, sizeof(DBT));    
+    memset(&keyt, 0, sizeof(DBT));
+    memset(&get_data, 0, sizeof(DBT));    
 
     keyt.data = &key;
     keyt.size = sizeof(int);
     data.data = ch;
     data.size = sizeof(struct character);
+    get_data.size = sizeof(struct character);
     
     memset(&log_data, 0, sizeof(DBT));
+
+    if((ret = dbp->get(dbp, NULL, &keyt, &get_data, 0)) != 0){
+        fprintf(stderr, "Record retrieve for delete log failed.\n");
+        dbp->err(dbp, ret, "DB->del");
+        return -1;
+    }
 
     if((ret = dbp->put(dbp, NULL, &keyt, &data, 0)) != 0){
        fprintf(stderr, "Record insert failed\n");
@@ -173,7 +187,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     record->key = key;
     record->offset = 0;
     record->data_length = sizeof(struct character);
-    //record->data = NULL;
+    array_xor(get_data.data, (unsigned char *)ch, record->data, sizeof(struct character));
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);

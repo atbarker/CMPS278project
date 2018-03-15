@@ -3,6 +3,9 @@
 
 #include <db.h>
 #include <time.h>
+#include "utils.h"
+
+#define RECORD_SIZE 40;
 
 struct db_context{
     DB *dbp;
