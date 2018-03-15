@@ -11,6 +11,14 @@
 
 #include "utils.h"
 
+int bitmap_get(unsigned char *bitmap, int bitnum, int len){
+    return 0;
+}
+
+int bitmap_set(unsigned char *bitmap, int bitnum, int len){
+    return 0;
+}
+
 void hex_dump(char *label, void *addr, int len){
     int i;
     unsigned char buff[17];

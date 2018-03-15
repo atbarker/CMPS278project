@@ -17,11 +17,12 @@ struct thread_args {
     uint64_t memsize;  
 };
 
-int key_exists(unsigned char *changed, int records, int key){
+//check if a key exists
+int key_exists(unsigned char *changed, int length, int key){
     int i;
     printf("checking key\n");
-    for(i = records; i>=0; i--){
-        
+    if(bitmap_get(changed, key, length)){
+        return 1;
     }
     return 0;
 }
@@ -104,21 +105,22 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
             if(log->type == 0){
                 memcpy(sum->diffs[ret], log->data, sizeof(struct character));
             }else if(log->type == 1){
-
+                //retrieve (do nothing)
             }else if(log->type == 2){
-
-            }else{
- 
+                //delete, xor
+            }else if(log->type == 3){
+                //update, xor
             }
         }else{
             if(log->type == 0){
                 memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+                //set the bit
             }else if(log->type == 1){
-
+                //retrieve (do nothing)
             }else if(log->type == 2){
-
-            }else{
- 
+                //delete, set bit and xor
+            }else if(log->type == 3){
+                //update, set bit and xor
             }
             rollback_count++;
         }
