@@ -35,8 +35,8 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     record->type = 0;
     record->key = context->next_available_id;
     record->offset = 0;
-    record->before = NULL;
-    //record->after = ch;
+    record->data_length = sizeof(struct character);
+    memcpy(&record->data, ch, 40);
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -81,8 +81,8 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     record->type = 1;
     record->key = key;
     record->offset = 0;
-    record->before = NULL;
-    //record->after = NULL;
+    record->data_length = sizeof(struct character);
+    //record->data = 0;
 
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -118,13 +118,14 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
        dbp->err(dbp, ret, "DB->del");
        return -1;
     }
-
+   
+    //have to retrieve record before delete
     record->time = time(NULL);
-    record->XID = 0;
     record->type = 2;
     record->key = key;
     record->offset = 0;
-    record->before = NULL;
+    record->data_length = sizeof(struct character);
+    //record->before = NULL;
     //record->after = NULL;
 
     log_data.data = record;
@@ -171,8 +172,8 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     record->type = 0;
     record->key = key;
     record->offset = 0;
-    record->before = NULL;
-    //record->after = ch;
+    record->data_length = sizeof(struct character);
+    //record->data = NULL;
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);

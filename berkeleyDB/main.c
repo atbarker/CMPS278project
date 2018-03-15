@@ -44,55 +44,55 @@ int select_random(){
     }
 }
 
-struct character* create_character(char* name, char* class, int hp, int alive, int lvl){
-    struct character *ch = malloc(sizeof(struct character));
-    ch->id = next_available_id();
-    ch->name = name;
-    ch->class = class;
-    ch->hp = hp;
-    ch->alive = alive;
-    ch->lvl = lvl;
+struct character create_character(char* name, char* class, int hp, int alive, int lvl){
+    struct character ch;
+    ch.id = next_available_id();
+    ch.name = name;
+    ch.class = class;
+    ch.hp = hp;
+    ch.alive = alive;
+    ch.lvl = lvl;
     return ch;
 }
 
-struct character* create_random_character(){
-    struct character *ch = malloc(sizeof(struct character));
+struct character create_random_character(){
+    struct character ch;
     int class = rand() % 12 + 1;
-    ch->alive = 1;
-    ch->lvl = 1;
-    ch->hp = rand() % 15 + 1;
+    ch.alive = 1;
+    ch.lvl = 1;
+    ch.hp = rand() % 15 + 1;
     switch(class){
-        case 1: ch->class = "fighter"; break;
-        case 2: ch->class = "barbarian"; break;
-        case 3: ch->class = "bard"; break;
-        case 4: ch->class = "cleric"; break;
-        case 5: ch->class = "druid"; break;
-        case 6: ch->class = "paladin"; break;
-        case 7: ch->class = "ranger"; break;
-        case 8: ch->class = "wizard"; break;
-        case 10: ch->class = "warlock"; break;
-        case 11: ch->class = "sorcerer"; break;
-        case 12: ch->class = "monk"; break;
+        case 1: ch.class = "fighter"; break;
+        case 2: ch.class = "barbarian"; break;
+        case 3: ch.class = "bard"; break;
+        case 4: ch.class = "cleric"; break;
+        case 5: ch.class = "druid"; break;
+        case 6: ch.class = "paladin"; break;
+        case 7: ch.class = "ranger"; break;
+        case 8: ch.class = "wizard"; break;
+        case 10: ch.class = "warlock"; break;
+        case 11: ch.class = "sorcerer"; break;
+        case 12: ch.class = "monk"; break;
         default:
-            ch->class = "thief";
+            ch.class = "thief";
             break;
     }
     int name = rand() % 12 + 1;
     switch(name){
-        case 1: ch->name = "brian"; break;
-        case 2: ch->name = "dan"; break;
-        case 3: ch->name = "bob"; break;
-        case 4: ch->name = "stanely"; break;
-        case 5: ch->name = "aidan"; break;
-        case 6: ch->name = "feanor"; break;
-        case 7: ch->name = "fingolfin"; break;
-        case 8: ch->name = "fingon"; break;
-        case 9: ch->name = "finwe"; break;
-        case 10: ch->name = "elendil"; break;
-        case 11: ch->name = "isildur"; break;
-        case 12: ch->name = "ancalagon"; break;
+        case 1: ch.name = "brian"; break;
+        case 2: ch.name = "dan"; break;
+        case 3: ch.name = "bob"; break;
+        case 4: ch.name = "stanely"; break;
+        case 5: ch.name = "aidan"; break;
+        case 6: ch.name = "feanor"; break;
+        case 7: ch.name = "fingolfin"; break;
+        case 8: ch.name = "fingon"; break;
+        case 9: ch.name = "finwe"; break;
+        case 10: ch.name = "elendil"; break;
+        case 11: ch.name = "isildur"; break;
+        case 12: ch.name = "ancalagon"; break;
         default:
-            ch->name = " ";
+            ch.name = " ";
             break;
     }
 
@@ -115,8 +115,8 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
         DBT log_data;
         key.data = &context->next_available_id;
         key.size = sizeof(int);
-        struct character *ch = create_random_character();
-        data.data = ch;
+        struct character ch = create_random_character();
+        data.data = &ch;
         data.size = sizeof(struct character);
         if((ret = dbp->put(dbp, NULL, &key, &data, 0)) != 0){
             fprintf(stderr, "Record retrieve failed\n");
@@ -129,8 +129,8 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
         record->type = 0;
         record->key = context->next_available_id;
         record->offset = 0;
-        record->before = NULL;
-        //record->after = ch;
+        record->data_length = sizeof(struct character);
+        memcpy(record->data, &ch, sizeof(struct character));
       
         log_data.data = record;
         log_data.size = sizeof(struct db_log_record);
@@ -141,8 +141,7 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
         }
         context->next_available_id++;
         free(lsn);
-        free(record); 
-        free(ch); 
+        free(record);  
     }
     return 0;
 }
@@ -161,8 +160,8 @@ DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char
     }else{
         sum = rollback_linear(NULL, dbp, env, context);
     }
-    free(sum->diffs);
-    free(sum);
+   
+    rollback_destruct(sum);
     return NULL;
 }
 
@@ -214,7 +213,7 @@ int main(int argc, char *argv[]){
         fprintf(stdout, "done\n");
     }
 
-    struct character *ch = create_random_character();
+    struct character ch = create_random_character();
 
     rollback_to_timestamp(context, env, dbp, "bort", 0, NULL);
 
@@ -222,7 +221,6 @@ int main(int argc, char *argv[]){
         dbp->close(dbp, 0);
         env->close(env, 0);
     //}
-    free(ch);
     free(context);
     return 0;
 }

@@ -17,13 +17,11 @@ struct thread_args {
     uint64_t memsize;  
 };
 
-int key_exists(struct character *ch, int records, int key){
+int key_exists(unsigned char *changed, int records, int key){
     int i;
     printf("checking key\n");
     for(i = records; i>=0; i--){
-        if(ch[i].id == key){
-            return i;
-        }
+        
     }
     return 0;
 }
@@ -39,6 +37,17 @@ void* rollback_worker(void *args){
 void* shutdown(){
 
     return NULL;
+}
+
+int rollback_destruct(struct rollback_summary *sum){
+    int i;
+    for(i = 0; i < 6; i++){
+        free(sum->diffs[i]);
+    }
+    free(sum->diffs);
+    free(sum->changed);
+    free(sum);
+    return 0;
 }
 
 void *printGarbage(){
@@ -58,7 +67,11 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     int rollback_count = 0;
  
     sum->diffs_length = 6;
-    sum->diffs = malloc(sizeof(struct character) * 6);
+    sum->diffs = malloc(6 * sizeof(unsigned char *));
+    for(i = 0; i < sum->diffs_length; i++){
+        sum->diffs[i] = malloc(40);    
+    }
+    sum->changed = malloc(1024/8);
 
     //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
@@ -87,13 +100,25 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
         log = log_contents->data;
         int ret;
         //represent empty struct somehow
-        if(ret = key_exists(sum->diffs, rollback_count, log->key)){
+        if(ret = key_exists(sum->changed, rollback_count, log->key)){
             if(log->type == 0){
-                sum->diffs[ret] = log->before;
+                memcpy(sum->diffs[ret], log->data, sizeof(struct character));
+            }else if(log->type == 1){
+
+            }else if(log->type == 2){
+
+            }else{
+ 
             }
         }else{
             if(log->type == 0){
-                sum->diffs[rollback_count] = log->before;
+                memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+            }else if(log->type == 1){
+
+            }else if(log->type == 2){
+
+            }else{
+ 
             }
             rollback_count++;
         }
