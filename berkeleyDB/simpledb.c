@@ -70,7 +70,10 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     keyt.data = &key;
     keyt.size = sizeof(int);
     
-    memset(&log_data, 0, sizeof(DBT));
+    if((ret = dbp->exists(dbp, NULL, &keyt, 0)) == DB_NOTFOUND){
+        fprintf(stderr, "Key does not exist\n");
+        return -1;
+    }
 
     if((ret = dbp->get(dbp, NULL, &keyt, &data, 0)) != 0){
         fprintf(stderr, "Record retrieve failed\n");
@@ -115,6 +118,11 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     keyt.data = &key;
     keyt.size = sizeof(int);
     data.size = sizeof(struct character);
+
+    if((ret = dbp->exists(dbp, NULL, &keyt, 0)) == DB_NOTFOUND){
+        fprintf(stderr, "Key does not exist\n");
+        return -1;
+    }
 
     if((ret = dbp->get(dbp, NULL, &keyt, &data, 0)) != 0){
         fprintf(stderr, "Record retrieve for delete log failed.\n");
@@ -170,6 +178,11 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     get_data.size = sizeof(struct character);
     
     memset(&log_data, 0, sizeof(DBT));
+
+    if((ret = dbp->exists(dbp, NULL, &keyt, 0)) == DB_NOTFOUND){
+        fprintf(stderr, "Key does not exist\n");
+        return -1;
+    }
 
     if((ret = dbp->get(dbp, NULL, &keyt, &get_data, 0)) != 0){
         fprintf(stderr, "Record retrieve for delete log failed.\n");

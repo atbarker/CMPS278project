@@ -22,6 +22,19 @@ int bitmap_get(unsigned char *bitmap, int bitnum, int len){
     }
 }
 
+int bitmap_get_rand(unsigned char *bitmap, int len){
+    int tries = 0;
+    while(TRUE){
+        int random = rand() % len;
+        if(bitmap_get(bitmap, random, len)){
+            return random;
+        }else if(tries == len){
+            return -1;
+        }
+        tries++;
+    }
+}
+
 int bitmap_set(unsigned char *bitmap, int bitnum, int len, int bit){
     int byte = bitnum >> 3;
     int n = sizeof(bitnum)*8-3;

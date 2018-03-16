@@ -16,7 +16,9 @@ struct db_context{
     int next_available_id;
     int number_keys;
     int randint[1024];
-    int rand_index;    
+    int rand_index;
+    int bitmap_size;
+    unsigned char *id_bitmap;    
 };
 
 struct character{

@@ -101,17 +101,33 @@ struct character create_random_character(){
 }
 
 //populate the database with a certain number of random transactions
+//since retrieves have no bearing on the log, for the purposes of troubleshooting
+//they may be omitted.
 int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
-    int i;
-    //DBT key, data;
-    //int ret;
 
-    //memset(&key, 0, sizeof(DBT));
-    //memset(&data, 0, sizeof(DBT));
+    int i;
+    int key = 0;
 
     for(i=0; i<trans; i++){
-        struct character ch = create_random_character();
-        insert(dbp, env, &ch, context);  
+        int txn_type = rand() % 3 + 1;
+        //struct character ch = create_random_character();
+        struct character ch;
+        key = bitmap_get_rand(context->id_bitmap, context->bitmap_size);
+        switch(txn_type){
+            case 1:
+                ch = create_random_character(); 
+                insert(dbp, env, &ch, context);
+                break;
+            case 2: 
+                delete(dbp, env, key, context);
+                break;
+            case 3: 
+                ch = create_random_character();
+                update(dbp, env, key, &ch, context);
+                break;
+            default:
+                break;
+        }  
     }
     return 0;
 }
@@ -148,6 +164,9 @@ int main(int argc, char *argv[]){
     context->current_id = 0;
     context->next_available_id = 0;
     context->number_keys = 0;
+    context->bitmap_size = 1024;
+    context->id_bitmap = malloc(context->bitmap_size);
+    memset(context->id_bitmap, 0, context->bitmap_size);
 
     int transactions = 1024;
     int ret;
