@@ -56,6 +56,7 @@ void *printGarbage(){
 }
 
 //compile my rolled up log linearly
+//lSNs should be at 80 bytes
 struct rollback_summary* 
 rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
 
@@ -95,7 +96,7 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
     //grab each log record starting from that LSN
-    for(i = 1; i < 6; i++){
+    for(i = 1; i < sum->diffs_length; i++){
         //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
         printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
