@@ -20,7 +20,7 @@ struct thread_args {
 //check if a key exists
 int key_exists(unsigned char *changed, int length, int key){
     int i;
-    printf("checking key\n");
+    //printf("checking key\n");
     if(bitmap_get(changed, key, length)){
         return 1;
     }
@@ -91,14 +91,14 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     //printf("grabbing first log record\n");
     cursor->get(cursor, last_lsn, log_contents, DB_LAST);
     log = log_contents->data;
-    printf("timestamp: %lu \n", log->time);
+    //printf("timestamp: %lu \n", log->time);
     printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
     //grab each log record starting from that LSN
     for(i = 1; i < 6; i++){
         //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
-        //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+        printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
         int ret;
         //represent empty struct somehow
@@ -106,21 +106,31 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
             if(log->type == 0){
                 memcpy(sum->diffs[ret], log->data, sizeof(struct character));
             }else if(log->type == 1){
-                //retrieve (do nothing)
+                continue;
             }else if(log->type == 2){
-                //delete, xor
+                unsigned char temp[sizeof(struct character)];
+                memcpy(temp, sum->diffs[ret], sizeof(struct character));
+                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }else if(log->type == 3){
-                //update, xor
+                unsigned char temp[sizeof(struct character)];
+                memcpy(temp, sum->diffs[ret], sizeof(struct character));
+                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }
         }else{
             if(log->type == 0){
                 memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 1){
-                //retrieve (do nothing)
+                continue;
             }else if(log->type == 2){
+                unsigned char temp[sizeof(struct character)];
+                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
+                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 3){
+                unsigned char temp[sizeof(struct character)];
+                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
+                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }
             rollback_count++;
