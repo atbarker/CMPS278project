@@ -33,9 +33,9 @@ struct character{
 struct db_log_record{
     uint64_t time;
     uint32_t XID;
-    uint32_t type;
+    uint8_t type;
     uint32_t key;
-    uint32_t offset;
+    //uint32_t offset;
     uint32_t data_length;
     unsigned char data[40];   
 }__attribute__((packed));

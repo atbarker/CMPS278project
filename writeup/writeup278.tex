@@ -18,6 +18,7 @@
 \textbf{Abstract:} 
 \section{Introduction}
 \section{Problem}
+In here place references to other logging implementations and their capabilities.
 \section{Project}
 \subsection{Goals}
 The overall goal of this project was to produce a piece of software that could roll up discrete chunks
@@ -55,38 +56,63 @@ The second attempt at a log source for the database took the form of BerkeleyDB.
 BerkeleyDB presents a basic programming interface that allowed for storage of basic key/value data and a few additional features such as functions to govern logging, locking, a memory pool, and transaction management. Unlike SQLite all BerkeleyDB files are persistant even when all active sessions are closed. Databases exist within a database environment that contains the logging functionality that is necessary for the project. Arbitrary key/value pairs are stored as byte arrays and allow for easy integration with a low level programming language such as C or C++. It is for these reasons that BerkeleyDB was selected as the underlying framework upon which the rest of the project's implementation is built.
 
 \subsection{System Design}
-The database roll back system is built on top of the BerkeleyDB key/value store. 
+The database roll back system is built on top of the BerkeleyDB key/value store as a sort of middleware that provides access to basic database functionality. A user can create multiple databases and insert, retrieve, update, and delete records of a fixed maximum size, usually in the form of a C structure. Each record recieves a unique key assigned to it upon insertion. 
 
 Design overview image
 
-Log record structure
+Different functions available to the user.
 
-Linear roll back.
+Every transaction in the database is logged just before the actual operation reads or writes to or from the disk. Logs are read and written using built in BerkeleyDB logging functions that write to a set of seperate log files. The size of each log file can be specified by the user. Each log contains a 64 bit timestamp, a transaction identifier, the type of transaction, the key being operated on, the length of the actual data being operated on, and an object storing the difference between the data before and after the transaction. This log record layout is described in figure 2.
 
-Parallelized roll back.
+The system supports two methods of rolling back to a user specified timestamp. Either in a linear single threaded manner, or parallelized and multithreaded. In the single threaded case the database starts at the most recent log record present in the database and walks back along the log compositing the data differences for each key as it goes. When complete it produces a single summary of everything that has changed between the present database and how it existed and the previously specified time. This summary is then applied to the present database either in place on the existing instance or on a duplicate of the database. The parallelized approach functions similarly to any other divide and conquer algorithm. It will calculate the approximate number of log records between the most recent entry and the specified rollback point. If a timestamp is to be used to specify the rollback point then the log is partitioned according to a specific time quanta. Each range of logs within a time quanta is computed by its own thread. The end result of each thread is a summary of the changes made within that time quanta. Once each thread has finished computing its summary then these summaries can be merged in a similar manner to merge-sort and a total summary of every change made to the database between the present and the specified timestamp is produced. If a copy of the database at the specified past time is desired then each summary can be applied in order to the database. In a more simple method, log sequence numbers can be used instead of timestamps in order to define roll back points and partition sizes  but the end result is very much the same as using timestamps.
 
-Roll back with save points.
+In order to speed up the reconstruction process a thread could be set running in the background that would automatically produce a summary of changes for a given range of log records and store that alongside the database. Therefore whenever a roll back to a specific point in the log is desired the system only has to compute the summaries for the most recent log records and those between the specified log record and the nearest summary. This produces a situation where only two summaries must be computed instead of one for each time quanta.
 
 \subsection{Testing Database Setup}
 
-Database schema
-
-Random transaction generation and execution
+The database used to test the performance of the proof-of-concept implementation stored basic statistics for a set of Dungeons and Dragons characters. Each character was randomly generated using a simple C program. For each character the database stored an id, a name, a class, the character's health, whether or not the character was alive, and the character's level. In order to populate the database the user would specify a number of random transactions to perform. The transaction generator function would perform approximated an equal number of insert, retrieve, update, and delete operations.
 
 \subsection{Implementation}
 The log roll back system takes the form of a piece of basic middleware that is designed to interface with BerkeleyDB through the C API bindings and then presents itself as a library to user applications. The entirety of the program is implemented in C as it provided the right low level access and flexibility required to efficiently implement the structures that make up the core of the project.
 
-Database context
+\subsubsection{Database Context}
+When a database is started it creates a context for itself. This context is used by the roll back system to define a database and its attributes. This context contains a BerkeleyDB database pointer, an environment pointer, the most recent log sequence number, the current number of keys in the database, a bit vector to keep track of unique keys, and the bit vector's length. 
 
-Database records
+\subsubsection{Unique Identifiers and Records}
+One of the first challenges was keeping track of which database record a log entry is describing. To accomplish this a system of unique identifiers is used. In the system's present state the key and the identifier are the same value. The previously mentioned bit vector defined in the database's context keeps track of which unique identifiers are assigned to a database record within a given namespace. The vector rescales itself to reflect the maximum size of this namespace. This allowed for efficient re-use of identifiers as records were deleted and inserted.
 
-Log record management
+The data itself takes the form of C structures. These structures are written and stored in the form of byte arrays therefore enabling easy manipulation of the records within the logging, roll back, and summary application operations.
+
+
+\subsubsection{Database Functions}
+A set of four functions (insert, retrieve, delete, and update) were implemented in order to provide basic functionality for the database. In general each of these functions will take in at least some of the following, a database pointer, an environment pointer, a record key, a data structure to be written, and a database context pointer. Each of these functions also handle the writing to the log whenever an operation is successful.
+
+\subsubsection{Log Record Management}
+As stated above the log records are created and written to a log file within each database function. The data field within the log record is produced by a bitwise XOR between the new state of the record and the old. 
+
+\subsubsection{Log Roll Back}
+
+Log roll back is implemented in two different functions, linear and parallel. In the case of the linear method it simply goes through the list of modified record summaries and applies each to the corresponding location in either the original database or a clone using the standard BerkeleyDB get and put commands.
+
 
 Resulting programming interface for BerkeleyDB.
 
+\subsubsection{Underlying Database Challenges}
+The initial intention was to implement a system that would produce a summary from the logs of an existing database management system such as SQLite or PostgreSQL. Out of these choices SQLite was selected as it provided more detailed technical documentation and a simpler codebase. The first challenge encountered while collecting log records for experimentation and prototyping was the fact that SQLite's log and journal files are temporary and disappear when a session is close or are cleared periodically. The second challenge was the lack of a timestamp or other easily recognizable identifying marker on each record such as a log sequence number. The lack of this feature essential to goal A would neccessitate the modification of SQLite in order to even start experimenting and collecting log information. Third was the inconvient format of having each entry in the log be a copy of a changed database page. 
+
+It is for these reasons that BerkeleyDB was eventually chosen, albeit too late for a sophisticated implementation, for the underlying datastore and log producer. The extensive programming interface it presented allowed for much of the functionality for a roll back system to be built from the ground up as opposed to extensive and haphazard modification of an existing database system. Overall the use of BerkeleyDB as a starting point in developing the roll back system proved to be more effective as a proof of concept than the predicted path that SQLite or a more complex DBMS would have required. 
+
 \section{Results}
 \subsection{Implementation Status}
+
+Goal A has been accomplished
+
+Goal B has been accomplished
+
+When development pivoted from the use of SQLite to the use of BerkeleyDB the original object laid out in goal C was deemed irrelevant. Although in a way it was accomplished. BerkeleyDB, while old, it still a commonly used and established piece of software and the lower level storage engine interface proved to be the right level at which to pursue an implementation of a roll back system.
+
 \subsection{Current Log Application Methods}
+
 \subsection{Linear Log Application}
 \subsection{Parallelized Log Application}
 \subsection{Time/State Restoration}
