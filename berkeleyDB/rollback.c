@@ -13,8 +13,13 @@
 #include <db.h>
 
 struct thread_args {
-    void *mem;
-    uint64_t memsize;  
+    int begin_LSN;
+    int begin_LSN_file;
+    int end_LSN;
+    int end_LSN_file;
+    DB *dbp;
+    DB_ENV *env;
+    struct db_context *context; 
 };
 
 //check if a key exists
@@ -28,10 +33,13 @@ int key_exists(unsigned char *changed, int length, int key){
 }
 
 //retrieve a batch of log records and crunch the numbers
-void* rollback_worker(void *args){
+void rollback_worker(void *args){
     struct thread_args *td_args = args;
+    DB *dbp = td_args->dbp;
+    DB_ENV *env = td_args->env;
+    struct db_context *context = td_args->context;
 
-    /*DB_LOGC *cursor;
+    DB_LOGC *cursor;
     DB_LSN *last_lsn = malloc(sizeof(DB_LSN));
     DBT *log_contents = malloc(sizeof(DBT) * 6);
     struct db_log_record *log = NULL;
@@ -50,7 +58,7 @@ void* rollback_worker(void *args){
     //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
         fprintf(stderr, "Error creating database cursor\n");
-        return NULL;
+        //return NULL;
     }
 
     //have to initialize the objects
@@ -113,8 +121,7 @@ void* rollback_worker(void *args){
     cursor->close(cursor, 0);
     free(log_contents);
     free(last_lsn);
-    return sum;*/
-    return NULL;
+    //return sum;
 }
 
 //shutdown a worker
@@ -249,6 +256,7 @@ struct rollback_summary* rollback_parallel(
     int i;
     int quanta_divisions;
     int ret;
+    struct thread_args *td_args;
 
     //retrieve number of records in the database and the number of transactions
     
@@ -256,6 +264,7 @@ struct rollback_summary* rollback_parallel(
     if(time_quanta != 0){
         quanta_divisions = number_records/time_quanta;
 	threads = malloc(sizeof(pthread_t)*quanta_divisions);
+        td_args = malloc(sizeof(struct thread_args)*quanta_divisions);
         for(i=0; i < quanta_divisions; i++){
             if(pthread_create(&threads[i], NULL, printGarbage, NULL)){
                 fprintf(stderr, "Couldn't create thread %d\n", i);
@@ -269,6 +278,7 @@ struct rollback_summary* rollback_parallel(
     //if not then divide them up by the number of partitions
     else{
         threads = malloc(sizeof(pthread_t)* number_partitions);
+        td_args = malloc(sizeof(struct thread_args)*number_partitions);
         for(i=0; i < number_partitions; i++){
             ret = pthread_create(&threads[i], NULL, printGarbage, NULL);
             if(ret){
