@@ -12,10 +12,25 @@
 #include "utils.h"
 
 int bitmap_get(unsigned char *bitmap, int bitnum, int len){
-    return 0;
+    int byte = bitnum >> 3;
+    int n = sizeof(bitnum)*8-3;
+    int offset = ((unsigned) bitnum << n) >> n;
+    if(bitmap[byte] & (1 << (7-offset))){
+        return 1;
+    }else{
+        return 0;
+    }
 }
 
-int bitmap_set(unsigned char *bitmap, int bitnum, int len){
+int bitmap_set(unsigned char *bitmap, int bitnum, int len, int bit){
+    int byte = bitnum >> 3;
+    int n = sizeof(bitnum)*8-3;
+    int offset = ((unsigned) bitnum << n) >> n;
+    if(bit){
+        bitmap[byte] |= 1 << (7-offset);
+    }else{
+        bitmap[byte] &= ~(1 << (7-offset));
+    }
     return 0;
 }
 

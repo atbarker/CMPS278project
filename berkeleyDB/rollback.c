@@ -42,7 +42,7 @@ void* shutdown(){
 
 int rollback_destruct(struct rollback_summary *sum){
     int i;
-    for(i = 0; i < 6; i++){
+    for(i = 0; i < sum->diffs_length; i++){
         free(sum->diffs[i]);
     }
     free(sum->diffs);
@@ -66,13 +66,14 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     struct rollback_summary *sum = malloc(sizeof(struct rollback_summary));
     int i;
     int rollback_count = 0;
- 
-    sum->diffs_length = 6;
-    sum->diffs = malloc(6 * sizeof(unsigned char *));
+
+    sum->diffs_length = context->number_keys;
+    printf("number of keys %u\n", sum->diffs_length);
+    sum->diffs = malloc(sum->diffs_length * sizeof(unsigned char *));
     for(i = 0; i < sum->diffs_length; i++){
         sum->diffs[i] = malloc(40);    
     }
-    sum->changed = malloc(1024/8);
+    sum->changed = malloc(sum->diffs_length/8);
 
     //create the cursor
     if(env->log_cursor(env, &cursor, 0)){
@@ -114,13 +115,13 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
         }else{
             if(log->type == 0){
                 memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
-                //set the bit
+                bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 1){
                 //retrieve (do nothing)
             }else if(log->type == 2){
-                //delete, set bit and xor
+                bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 3){
-                //update, set bit and xor
+                bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }
             rollback_count++;
         }
@@ -154,6 +155,8 @@ struct rollback_summary* rollback_parallel(
     int i;
     int quanta_divisions;
     int ret;
+
+    //retrieve number of records in the database and the number of transactions
     
     //if a time quantum is specified then divide up the log records by time quantum 
     if(time_quanta != 0){

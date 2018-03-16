@@ -14,6 +14,7 @@ struct db_context{
     int number_lsn;
     int current_id;
     int next_available_id;
+    int number_keys;
     int randint[1024];
     int rand_index;    
 };

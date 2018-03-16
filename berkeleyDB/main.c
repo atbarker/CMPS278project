@@ -140,6 +140,7 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
             return -1;
         }
         context->next_available_id++;
+        context->number_keys++;
         free(lsn);
         free(record);  
     }
@@ -177,6 +178,7 @@ int main(int argc, char *argv[]){
 
     context->current_id = 0;
     context->next_available_id = 0;
+    context->number_keys = 0;
 
     int transactions = 1024;
     int ret;

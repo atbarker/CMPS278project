@@ -12,7 +12,7 @@
 
 //get and set instructions for a basic bitmap, bitmap is in the form of a byte array
 int bitmap_get(unsigned char *bitmap, int bitnum, int len);
-int bitmap_set(unsigned char *bitmap, int bitnum, int len);
+int bitmap_set(unsigned char *bitmap, int bitnum, int len, int bit);
 
 //perform a hex dump
 void hex_dump(char *label, void *addr, int len);

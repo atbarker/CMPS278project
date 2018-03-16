@@ -48,6 +48,7 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     
     context->recent_lsn = *lsn;
     context->next_available_id++;
+    context->number_keys++;
 
     free(lsn);
     free(record);
@@ -92,6 +93,7 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     }
 
     context->recent_lsn = *lsn;
+    context->number_keys--;
     
     free(lsn);
     free(record);
