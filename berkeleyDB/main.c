@@ -118,9 +118,9 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
                 ch = create_random_character(); 
                 insert(dbp, env, &ch, context);
                 break;
-            case 2: 
-                delete(dbp, env, key, context);
-                break;
+            //case 2: 
+            //    delete(dbp, env, key, context);
+            //    break;
             case 3: 
                 ch = create_random_character();
                 update(dbp, env, key, &ch, context);
@@ -211,6 +211,7 @@ int main(int argc, char *argv[]){
         dbp->close(dbp, 0);
         env->close(env, 0);
     //}
+    free(context->id_bitmap);
     free(context);
     return 0;
 }

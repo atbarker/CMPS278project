@@ -17,7 +17,13 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     memset(&data, 0, sizeof(DBT));
     memset(&key, 0, sizeof(DBT));    
 
-    key.data = &context->next_available_id;
+    int new_key = bitmap_get_next(context->id_bitmap, context->bitmap_size); 
+
+    if(new_key == -1){
+
+    }
+
+    key.data = &new_key;
     key.size = sizeof(int);
     data.data = ch;
     data.size = sizeof(struct character);
@@ -49,6 +55,7 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     context->recent_lsn = *lsn;
     context->next_available_id++;
     context->number_keys++;
+    bitmap_set(context->id_bitmap, new_key, context->bitmap_size, 1);
 
     free(lsn);
     free(record);
@@ -96,7 +103,7 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     }
 
     context->recent_lsn = *lsn;
-    context->number_keys--;
+    
     
     free(lsn);
     free(record);
@@ -153,6 +160,8 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     }
     
     context->recent_lsn = *lsn;
+    context->number_keys--;
+    bitmap_set(context->id_bitmap, key, context->bitmap_size, 0);
     
     free(lsn);
     free(record);
@@ -176,17 +185,23 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     data.data = ch;
     data.size = sizeof(struct character);
     get_data.size = sizeof(struct character);
+    get_data.flags = DB_DBT_MALLOC;
     
     memset(&log_data, 0, sizeof(DBT));
 
     if((ret = dbp->exists(dbp, NULL, &keyt, 0)) == DB_NOTFOUND){
-        fprintf(stderr, "Key does not exist\n");
+        fprintf(stderr, "Key does not exist %d \n", key);
+        free(lsn);
+        free(record);
         return -1;
     }
 
     if((ret = dbp->get(dbp, NULL, &keyt, &get_data, 0)) != 0){
-        fprintf(stderr, "Record retrieve for delete log failed.\n");
+        fprintf(stderr, "Record retrieve for update log failed.\n");
         dbp->err(dbp, ret, "DB->del");
+        free(lsn);
+        free(record);
+        free(get_data.data);
         return -1;
     }
 
@@ -217,5 +232,6 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
 
     free(lsn);
     free(record);
+    free(get_data.data);
     return 0;
 }

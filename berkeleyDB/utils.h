@@ -14,6 +14,9 @@
 int bitmap_get(unsigned char *bitmap, int bitnum, int len);
 //this one returns the index of the newly selected bit
 int bitmap_get_rand(unsigned char *bitmap, int len);
+//return the next available
+int bitmap_get_next(unsigned char *bitmap, int len);
+//set the specified bit
 int bitmap_set(unsigned char *bitmap, int bitnum, int len, int bit);
 
 //perform a hex dump
