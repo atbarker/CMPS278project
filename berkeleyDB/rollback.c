@@ -182,7 +182,7 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     for(i = 1; i < sum->diffs_length; i++){
         //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
-        printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+        //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
         int ret;
         //represent empty struct somehow
