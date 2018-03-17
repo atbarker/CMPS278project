@@ -92,7 +92,13 @@ As stated above the log records are created and written to a log file within eac
 
 \subsubsection{Log Roll Back}
 
-Log roll back is implemented in two different functions, linear and parallel. In the case of the linear method it simply goes through the list of modified record summaries and applies each to the corresponding location in either the original database or a clone using the standard BerkeleyDB get and put commands.
+Log roll back is implemented in two different functions, linear and parallel. 
+In the case of a linear roll back it will traverse a specified section of the log, which is stored in a seperate file, and compiles a summary of 
+all changes made to the database. This summary takes the form of a list of byte arrays and a bitmap. 
+Each byte array contains the data field of a log record while the bitmap is used to keep track of which keys were modified. In order to roll back to before an operation one must simply write this data field to the corresponding key using the standard get and put commands.
+
+For a parallelized rollback we break up the logs between the present database configuration and the desired rollback point into a set of partitions defined by upper and lower bound log sequence numbers. 
+A new thread is created for each partition and produces its own summary. Currently the summaries from each thread are not merged together but instead are applied to the database individually. One major limitation of the current implementation is that BerkeleyDB will seemingly not allow two log cursors on a single file so therefore all the threads must share. With a shared resource a locking mechanism must be implemented which then produces overhead via lock contention.
 
 
 Resulting programming interface for BerkeleyDB.
@@ -105,9 +111,7 @@ It is for these reasons that BerkeleyDB was eventually chosen, albeit too late f
 \section{Results}
 \subsection{Implementation Status}
 
-Goal A has been accomplished
-
-Goal B has been accomplished
+As of the writing of this paper goals A and B have been accomplished and goal C has been partially accomplished. The implemented system can take a database and its corresponding log and process discrete chunks of the log in a parallelized manner. When complete it outputs a summary of what exactly has changed in the database. In essence a database equivalent of the "diff" command. 
 
 When development pivoted from the use of SQLite to the use of BerkeleyDB the original object laid out in goal C was deemed irrelevant. Although in a way it was accomplished. BerkeleyDB, while old, it still a commonly used and established piece of software and the lower level storage engine interface proved to be the right level at which to pursue an implementation of a roll back system.
 
@@ -117,6 +121,8 @@ When development pivoted from the use of SQLite to the use of BerkeleyDB the ori
 \subsection{Parallelized Log Application}
 \subsection{Time/State Restoration}
 \subsection{Current Limitations}
+Currently the system has difficulty with larger numbers of partitions in the log. Also there is a significant lock contention issue when reading the log file from multiple threads. A possible solution to this is multiple copies of the log file for each individual thread or spreading the log across multiple files.
+\subsection{Related Work}
 \subsection{Potential Future Work}
 \section{Conclusion}
 \section{References}
