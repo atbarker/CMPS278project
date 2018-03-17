@@ -88,7 +88,7 @@ The data itself takes the form of C structures. These structures are written and
 A set of four functions (insert, retrieve, delete, and update) were implemented in order to provide basic functionality for the database. In general each of these functions will take in at least some of the following, a database pointer, an environment pointer, a record key, a data structure to be written, and a database context pointer. Each of these functions also handle the writing to the log whenever an operation is successful.
 
 \subsubsection{Log Record Management}
-As stated above the log records are created and written to a log file within each database function. The data field within the log record is produced by a bitwise XOR between the new state of the record and the old. 
+As stated above the log records are created and written to a log file within each database function. The data field within each log record contains the contents of the database record before the log's corresponding operation took place. 
 
 \subsubsection{Log Roll Back}
 
