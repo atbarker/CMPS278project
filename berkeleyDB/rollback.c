@@ -46,12 +46,15 @@ void *rollback_worker(void *args){
     struct rollback_summary *sum = malloc(sizeof(struct rollback_summary));
     int i;
     int rollback_count = 0;
-
-    sum->diffs_length = context->number_keys;
-    printf("number of keys %u\n", sum->diffs_length);
+    
+    //printf("begin LSN %d \n", td_args->begin_LSN);
+    //printf("end LSN %d \n", td_args->end_LSN);
+    //printf("sizeof log %lu \n", sizeof(struct db_log_record));
+    sum->diffs_length = (td_args->begin_LSN - td_args->end_LSN)/sizeof(struct db_log_record);
+    //printf("number of keys %u\n", sum->diffs_length);
     sum->diffs = malloc(sum->diffs_length * sizeof(unsigned char *));
     for(i = 0; i < sum->diffs_length; i++){
-        sum->diffs[i] = malloc(40);    
+        sum->diffs[i] = malloc(sizeof(struct character));    
     }
     sum->changed = malloc(sum->diffs_length/8);
 
@@ -66,19 +69,23 @@ void *rollback_worker(void *args){
     memset(log_contents, 0, sizeof(DBT));
     log_contents->data = NULL;
     log_contents->size = sizeof(struct db_log_record);
+    last_lsn->file = 1;
+    last_lsn->offset = td_args->begin_LSN;
  
     //scan from the most recent log record to the correct timestamp or LSN
     //printf("grabbing first log record\n");
     cursor->get(cursor, last_lsn, log_contents, DB_LAST);
     log = log_contents->data;
+    sum->diffs[0] = log->data;
+    rollback_count++;
     //printf("timestamp: %lu \n", log->time);
-    printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+    //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
     //grab each log record starting from that LSN
     for(i = 1; i < sum->diffs_length; i++){
         //printf("Grabbing recent log %d\n", i);
         cursor->get(cursor, last_lsn, log_contents, DB_PREV);
-        printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+        //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
         int ret;
         //represent empty struct somehow
@@ -88,13 +95,13 @@ void *rollback_worker(void *args){
             }else if(log->type == 1){
                 continue;
             }else if(log->type == 2){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[ret], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[ret], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }else if(log->type == 3){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[ret], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[ret], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }
         }else{
             if(log->type == 0){
@@ -103,14 +110,14 @@ void *rollback_worker(void *args){
             }else if(log->type == 1){
                 continue;
             }else if(log->type == 2){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 3){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }
             rollback_count++;
@@ -141,9 +148,11 @@ int rollback_destruct(struct rollback_summary *sum){
     return 0;
 }
 
-void *printGarbage(){
-    printf("thread yay\n");
+int apply_rollback(DB *dbp, DB_ENV *env, struct db_context *context, struct rollback_summary *sum){
+
+
 }
+
 
 //compile my rolled up log linearly
 //lSNs should be at 80 bytes
@@ -162,7 +171,7 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     printf("number of keys %u\n", sum->diffs_length);
     sum->diffs = malloc(sum->diffs_length * sizeof(unsigned char *));
     for(i = 0; i < sum->diffs_length; i++){
-        sum->diffs[i] = malloc(40);    
+        sum->diffs[i] = malloc(sizeof(struct character));    
     }
     sum->changed = malloc(sum->diffs_length/8);
 
@@ -182,6 +191,8 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     //printf("grabbing first log record\n");
     cursor->get(cursor, last_lsn, log_contents, DB_LAST);
     log = log_contents->data;
+    //sum->diffs[0] = log->data;
+    //rollback_count++;
     //printf("timestamp: %lu \n", log->time);
     printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
@@ -199,13 +210,13 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
             }else if(log->type == 1){
                 continue;
             }else if(log->type == 2){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[ret], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[ret], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }else if(log->type == 3){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[ret], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[ret], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[ret], sizeof(struct character));
             }
         }else{
             if(log->type == 0){
@@ -214,14 +225,14 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
             }else if(log->type == 1){
                 continue;
             }else if(log->type == 2){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }else if(log->type == 3){
-                unsigned char temp[sizeof(struct character)];
-                memcpy(temp, sum->diffs[rollback_count], sizeof(struct character));
-                array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
+                //unsigned char temp[sizeof(struct character)];
+                memcpy(sum->diffs[rollback_count], log->data, sizeof(struct character));
+                //array_xor(log->data, temp, sum->diffs[rollback_count], sizeof(struct character));
                 bitmap_set(sum->changed, log->key, sum->diffs_length, 1);
             }
             rollback_count++;
@@ -268,7 +279,7 @@ struct rollback_summary* rollback_parallel(
 	threads = malloc(sizeof(pthread_t)*quanta_divisions);
         td_args = malloc(sizeof(struct thread_args)*quanta_divisions);
         for(i=0; i < quanta_divisions; i++){
-            if(pthread_create(&threads[i], NULL, printGarbage, NULL)){
+            if(pthread_create(&threads[i], NULL, rollback_worker, (void *)&td_args[i])){
                 fprintf(stderr, "Couldn't create thread %d\n", i);
             }
             printf("Thread %d created\n", i);
@@ -280,11 +291,14 @@ struct rollback_summary* rollback_parallel(
     //if not then divide them up by the number of partitions
     else{
         threads = malloc(sizeof(pthread_t)* number_partitions);
+        printf("lsn %d\n", context->number_lsn);
         td_args = malloc(sizeof(struct thread_args)*number_partitions);
+        int total_records = context->number_lsn - (rollback_lsn * sizeof(struct db_log_record)); 
+        int chunk_size = total_records/number_partitions;
         for(i=0; i < number_partitions; i++){
-            td_args[i].begin_LSN = 0;
+            td_args[i].begin_LSN = context->number_lsn - (i*chunk_size);
             td_args[i].begin_LSN_file = 1;
-            td_args[i].end_LSN = 0;
+            td_args[i].end_LSN = context->number_lsn - ((i+1)*chunk_size);
             td_args[i].end_LSN_file = 1;
             td_args[i].dbp = dbp;
             td_args[i].env = env;
@@ -294,6 +308,8 @@ struct rollback_summary* rollback_parallel(
                 fprintf(stderr, "Could not create thread %d\n", i);
             }
             printf("Thread %d created\n", i);
+            printf("begin LSN: %d \n", td_args[i].begin_LSN);
+            printf("end LSN: %d \n", td_args[i].end_LSN);
         }
         for(i=0; i < number_partitions; i++){
             pthread_join(threads[i], NULL);

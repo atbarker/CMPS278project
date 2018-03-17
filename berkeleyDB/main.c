@@ -111,43 +111,40 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
     for(i=0; i<trans; i++){
         int txn_type = rand() % 3 + 1;
         //struct character ch = create_random_character();
-        struct character ch;
+        struct character ch = create_random_character();
         key = bitmap_get_rand(context->id_bitmap, context->bitmap_size);
         switch(txn_type){
             case 1:
-                ch = create_random_character(); 
                 insert(dbp, env, &ch, context);
                 break;
             //case 2: 
             //    delete(dbp, env, key, context);
             //    break;
             case 3: 
-                ch = create_random_character();
                 update(dbp, env, key, &ch, context);
                 break;
             default:
                 break;
-        }  
+        }
     }
     return 0;
 }
 
-DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char* new_db_name, int parallel, DB_LSN *lsn){
+DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char* new_db_name, int parallel, int records){
     //if we want to run a test in parallel, otherwise run it single threaded
     //in a linear manner.
-    int records = 0;
     int time = 0;
-    int partitions = 1;
-    int rollback_lsn = 1;
+    int partitions = 3;
+    int rollback_lsn = records;
     struct rollback_summary *sum = NULL;
 
     if(parallel){
-        sum = rollback_parallel(records, time, partitions, rollback_lsn, dbp, env, context);
+        sum = rollback_parallel(0, time, partitions, rollback_lsn, dbp, env, context);
     }else{
         sum = rollback_linear(NULL, dbp, env, context);
     }
    
-    rollback_destruct(sum);
+    //rollback_destruct(sum);
     return NULL;
 }
 
@@ -159,16 +156,16 @@ int main(int argc, char *argv[]){
     DBC *cursor = NULL;
     DB_ENV *env = NULL;
     int fill = 1;
+    int transactions = 1024;
     random_index = 0;
 
     context->current_id = 0;
     context->next_available_id = 0;
     context->number_keys = 0;
-    context->bitmap_size = 1024;
+    context->bitmap_size = transactions;
     context->id_bitmap = malloc(context->bitmap_size);
     memset(context->id_bitmap, 0, context->bitmap_size);
 
-    int transactions = 1024;
     int ret;
      
     if(ret = db_env_create(&env, 0)){
@@ -203,9 +200,9 @@ int main(int argc, char *argv[]){
         fprintf(stdout, "done\n");
     }
 
-    struct character ch = create_random_character();
+    //struct character ch = create_random_character();
 
-    rollback_to_timestamp(context, env, dbp, "bort", 0, NULL);
+    rollback_to_timestamp(context, env, dbp, "bort", 1, 200);
 
     //while(TRUE){
         dbp->close(dbp, 0);

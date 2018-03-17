@@ -53,6 +53,7 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     }
     
     context->recent_lsn = *lsn;
+    context->number_lsn = lsn->offset;
     context->next_available_id++;
     context->number_keys++;
     bitmap_set(context->id_bitmap, new_key, context->bitmap_size, 1);
@@ -103,7 +104,7 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     }
 
     context->recent_lsn = *lsn;
-    
+    context->number_lsn = lsn->offset; 
     
     free(lsn);
     free(record);
@@ -160,6 +161,7 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     }
     
     context->recent_lsn = *lsn;
+    context->number_lsn = lsn->offset;
     context->number_keys--;
     bitmap_set(context->id_bitmap, key, context->bitmap_size, 0);
     
@@ -217,7 +219,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     record->key = key;
     //record->offset = 0;
     record->data_length = sizeof(struct character);
-    array_xor(get_data.data, (unsigned char *)ch, record->data, sizeof(struct character));
+    memcpy(&record->data, &get_data.data, sizeof(struct character));
     
     log_data.data = record;
     log_data.size = sizeof(struct db_log_record);
@@ -228,6 +230,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     }
 
     context->recent_lsn = *lsn;
+    context->number_lsn = lsn->offset;
     context->next_available_id++;
 
     free(lsn);
