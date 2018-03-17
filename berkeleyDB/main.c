@@ -202,7 +202,13 @@ int main(int argc, char *argv[]){
 
     //struct character ch = create_random_character();
 
+    clock_t begin = clock();
+
     rollback_to_timestamp(context, env, dbp, "bort", 1, 200);
+
+    clock_t end = clock();
+    
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
     //while(TRUE){
         dbp->close(dbp, 0);

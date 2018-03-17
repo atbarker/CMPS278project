@@ -70,7 +70,7 @@ void *rollback_worker(void *args){
     //    fprintf(stderr, "Error creating database cursor\n");
         //return NULL;
     //}
-    printf("cursor created %p\n", cursor);
+    //printf("cursor created %p\n", cursor);
     //have to initialize the objects
     memset(last_lsn, 0, sizeof(DB_LSN));
     memset(log_contents, 0, sizeof(DBT));
@@ -81,7 +81,7 @@ void *rollback_worker(void *args){
     //printf("done initializing up the log\n");
      
     //scan from the most recent log record to the correct timestamp or LSN
-    printf("grabbing first log record\n");
+    //printf("grabbing first log record\n");
     //pthread_mutex_lock(&rollback_lock);
     //cursor->get(cursor, last_lsn, log_contents, DB_LAST);
     //log = log_contents->data;
@@ -90,14 +90,14 @@ void *rollback_worker(void *args){
     //pthread_mutex_unlock(&rollback_lock);
     //last_lsn->offset -= sizeof(struct db_log_record);
     //printf("timestamp: %lu \n", log->time);
-    printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
-    printf("right before the fun shit\n");
+    //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+    //printf("right before the fun shit\n");
     //grab each log record starting from that LSN
     for(i = 0; i < sum->diffs_length; i++){
         pthread_mutex_lock(&rollback_lock);
-        printf("Thread %d\n", td_args->thread_num);
+        //printf("Thread %d\n", td_args->thread_num);
         cursor->get(cursor, last_lsn, log_contents, DB_SET);
-        printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+        //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
         log = log_contents->data;
         pthread_mutex_unlock(&rollback_lock);
         int ret;
@@ -210,7 +210,7 @@ rollback_linear(DB_LSN *lsn, DB *dbp, DB_ENV *env, struct db_context *context){
     //sum->diffs[0] = log->data;
     //rollback_count++;
     //printf("timestamp: %lu \n", log->time);
-    printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
+    //printf("LSN: %u %u \n", last_lsn->file, last_lsn->offset);
 
     //grab each log record starting from that LSN
     for(i = 1; i < sum->diffs_length; i++){
