@@ -142,7 +142,7 @@ DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char
     struct rollback_summary *sum = NULL;
 
     if(parallel){
-        sum = rollback_parallel(records, time, partitions, rollback_lsn, context);
+        sum = rollback_parallel(records, time, partitions, rollback_lsn, dbp, env, context);
     }else{
         sum = rollback_linear(NULL, dbp, env, context);
     }

@@ -33,7 +33,7 @@ int key_exists(unsigned char *changed, int length, int key){
 }
 
 //retrieve a batch of log records and crunch the numbers
-void rollback_worker(void *args){
+void *rollback_worker(void *args){
     struct thread_args *td_args = args;
     DB *dbp = td_args->dbp;
     DB_ENV *env = td_args->env;
@@ -248,7 +248,9 @@ struct rollback_summary* rollback_parallel(
     int number_records, 
     int time_quanta, 
     int number_partitions, 
-    int rollback_lsn, 
+    int rollback_lsn,
+    DB *dbp,
+    DB_ENV *env, 
     struct db_context *context)
 {
     
@@ -280,7 +282,14 @@ struct rollback_summary* rollback_parallel(
         threads = malloc(sizeof(pthread_t)* number_partitions);
         td_args = malloc(sizeof(struct thread_args)*number_partitions);
         for(i=0; i < number_partitions; i++){
-            ret = pthread_create(&threads[i], NULL, printGarbage, NULL);
+            td_args[i].begin_LSN = 0;
+            td_args[i].begin_LSN_file = 1;
+            td_args[i].end_LSN = 0;
+            td_args[i].end_LSN_file = 1;
+            td_args[i].dbp = dbp;
+            td_args[i].env = env;
+            td_args[i].context = context;
+            ret = pthread_create(&threads[i], NULL, rollback_worker, (void*)&td_args[i]);
             if(ret){
                 fprintf(stderr, "Could not create thread %d\n", i);
             }

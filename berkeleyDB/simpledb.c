@@ -40,7 +40,7 @@ int insert(DB *dbp, DB_ENV *env, struct character *ch, struct db_context *contex
     record->XID = 0;
     record->type = 0;
     record->key = context->next_available_id;
-    record->offset = 0;
+//    record->offset = 0;
     record->data_length = sizeof(struct character);
     memcpy(&record->data, ch, 40);
     
@@ -91,7 +91,7 @@ int retrieve(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_cont
     record->XID = 0;
     record->type = 1;
     record->key = key;
-    record->offset = 0;
+    //record->offset = 0;
     record->data_length = sizeof(struct character);
 
     log_data.data = record;
@@ -147,7 +147,7 @@ int delete(DB *dbp, DB_ENV *env, int key, struct db_context *context){
     record->time = time(NULL);
     record->type = 2;
     record->key = key;
-    record->offset = 0;
+    //record->offset = 0;
     record->data_length = sizeof(struct character);
     memcpy(&record->data, &data.data, sizeof(struct character));
 
@@ -215,7 +215,7 @@ int update(DB *dbp, DB_ENV *env, int key, struct character *ch, struct db_contex
     record->XID = 0;
     record->type = 0;
     record->key = key;
-    record->offset = 0;
+    //record->offset = 0;
     record->data_length = sizeof(struct character);
     array_xor(get_data.data, (unsigned char *)ch, record->data, sizeof(struct character));
     
