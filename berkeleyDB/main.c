@@ -134,7 +134,7 @@ DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char
     //if we want to run a test in parallel, otherwise run it single threaded
     //in a linear manner.
     int time = 0;
-    int partitions = 3;
+    int partitions = 4;
     int rollback_lsn = records;
     struct rollback_summary *sum = NULL;
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
  
-    if(env->open(env, NULL, DB_INIT_LOG | DB_INIT_MPOOL | DB_CREATE | DB_THREAD, 0644)){
+    if(env->open(env, NULL, DB_INIT_LOG | DB_INIT_MPOOL | DB_CREATE | DB_THREAD | DB_INIT_LOCK, 0644)){
         fprintf(stderr, "Couldn't open db environement\n");
         return -1;
     }
