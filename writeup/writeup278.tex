@@ -1,6 +1,7 @@
 \documentclass{article}
+\bibliographystyle{plain}
 \usepackage{tikz}
-
+\usepackage{bibentry}
 \usepackage{multicol}
 \usepackage{enumitem}
 \usepackage{blindtext}
@@ -17,9 +18,24 @@
 
 \textbf{Abstract:} 
 \section{Introduction}
+Many modern database systems utilize some form of logging in order to provide ACID characteristics for their transactions, backup, and recovery features. Through systems such as Write Ahead Logging, undo operations done with the support of a database transaction log are relatively common\cite{WAL}. Although what is not explored is the ability to reapply these logs as undo operations in parallel by breaking up the log to be rolled back into discrete chunks. These discrete chunks could then be applied to the database in batches as either part of the undo step of a recovery algorithm or in order to restore the state of the database to some desired previous point in time.
+
+This paper presents a database logging system built on top of the BerkeleyDB key/value store that provides sufficient detail in its logging records to enable reconstruction of a database at any point in time that is described by the log. This is accomplished through compositing operations described in the log into a summary of all changes to the database between two points in time or log sequence numbers. One or more of these summaries are then applied to the database in order to produce an instance of the database as it existed at a previous time. In essence the system performs undo operations on the database in a parallelized manner.
 \section{Problem}
-In here place references to other logging implementations and their capabilities.
+
+\subsection{Background} 
+Among current database systems there are very few that enable a roll back to a specific time stamp. Most simply utilize their logging infrastructure to ensure basic ACID characteristics or for backup and recovery tasks.
+
+In the case of Databases such as PostgreSQL and the InnoDB component of MySQL will utilize their write ahead log not only for redo and undo operations similarly to write ahead logging but they will also use them for backup operations and something called point-in-time recovery (PITR)\cite{InnoDBpoint} \cite{Postgrespoint}. PITR enables a full backup of the database to be stored at regular intervals and then be restored to the latest state of the database by playing redo operations from the log on top of the backup.
+
+Very similar in theory to what we wished to accomplish is the concept of a 'rollback segment' as seen in InnoDB \cite{InnoDBredo}. Although these rollback segments in actuality are data structures that are used to organize the transaction logs into easily manageable pieces as opposed to processed summaries.
+
+Many write ahead logging implementations do not store there logs for long. In the case of databases like SQLite and InnoDB there is a limit to either how much storage is used to contain the log or how old log records are permitted to be. In the case of SQLite we see that log records are stored in temporary files and are disposed of at either regular time intervals or when all active sessions with the database are closed \cite{SQLiteLog}. In the case of InnoDB we see that there is a limited number of log segments that can store the logs needed to rollback the database\cite{InnoDBUndo}.
+
+
 \section{Project}
+The overarching aim of this project was to explore the viability of performing log application methods in parallel by computing summaries of discrete sections of the log and applying these summaries to the database. To explore this concept a testing system was to be built as a proof-of-concept and to return quantitative results on whether or not the system provides any performance advantages over applying the log to the database in order. A set of three milestones were established in order to break the project up into manageable stages that would build on one another. 
+
 \subsection{Goals}
 The overall goal of this project was to produce a piece of software that could roll up discrete chunks
 of the log. Then use these chunks in order to reconstruct the state of the database at any time that
@@ -35,7 +51,7 @@ existing logging and recovery methods such as write-ahead logging.\\
 \textbf{B)} The second milestone involves storing specific save points to the disk that would contain what 
 is essentially a "diff" of the database between the start and end of a log chunk. This diff would be 
 analogous to the output of the unix command "diff". Also included in this milestone is parallelized execution.
-Though that would depend on whether or not the system was implemented in a lower level language such as C/C++.\\
+Though that would depend on whether or not the system was implemented in a lower level language such as C/C++. This step would be the minimum for producing results if the system was implemented in a lower level language.\\
 
 \textbf{C)} The final milestone and coup de grace of the project would be its inclusion into an existing
 database system or the implementation of a new one. Most likely this would manifest itself in a simpler
@@ -92,6 +108,13 @@ The data itself takes the form of C structures. These structures are written and
 \subsubsection{Database Functions}
 A set of four functions (insert, retrieve, delete, and update) were implemented in order to provide basic functionality for the database. In general each of these functions will take in at least some of the following, a database pointer, an environment pointer, a record key, a data structure to be written, and a database context pointer. Each of these functions also handle the writing to the log whenever an operation is successful.
 
+\begin{itemize}[noitemsep]
+    \item insert(): Takes in a DB pointer, ENV pointer, a record struct, and a context pointer. Finds the first available key and writes the record struct under that key. Logs the transaction as type 0.
+    \item retrieve(): Takes in a DB pointer, ENV pointer, a key, and a context pointer. Returns the record struct found at the specified key. Logs the transaction as type 1.
+    \item delete(): Takes in a DB pointer, ENV pointer, a key, and a context pointer. Removes the data found the specified key and marks that key as available for use. Logs the transaction as type 2.
+    \item update(): Takes in a DB pointer, ENV pointer, a key, a record struct, and a context pointer. Overwrites the data found at the specified key with the provided record struct. Logs the transaction as type 3.
+\end{itemize}
+
 \subsubsection{Log Record Management}
 
 \begin{figure*}
@@ -135,12 +158,14 @@ When development pivoted from the use of SQLite to the use of BerkeleyDB the ori
 \subsection{Time/State Restoration}
 \subsection{Current Limitations}
 Currently the system has difficulty with larger numbers of partitions in the log. Also there is a significant lock contention issue when reading the log file from multiple threads. A possible solution to this is multiple copies of the log file for each individual thread or spreading the log across multiple files.
-\subsection{Related Work}
-\subsection{Potential Future Work}
-\section{Conclusion}
-\section{References}
 
+Another major limitation of this system is the log overhead. In the process of storing log records with enough information to reconstruct the database at any given time a significant amount of storage space is used. 
+\subsection{Future Work}
+\section{Conclusion}
+
+\bibliography{278}
 
 %\end{multicols}
+
 
 \end{document}
