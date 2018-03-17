@@ -93,7 +93,15 @@ The data itself takes the form of C structures. These structures are written and
 A set of four functions (insert, retrieve, delete, and update) were implemented in order to provide basic functionality for the database. In general each of these functions will take in at least some of the following, a database pointer, an environment pointer, a record key, a data structure to be written, and a database context pointer. Each of these functions also handle the writing to the log whenever an operation is successful.
 
 \subsubsection{Log Record Management}
-As stated above the log records are created and written to a log file within each database function. The data field within each log record contains the contents of the database record before the log's corresponding operation took place. 
+
+\begin{figure*}
+    \centering
+    \includegraphics[height=0.75in]{LogRecordFormat.png}
+    \caption{Log Record Format, the last data field in the record can vary in size based on how big a data byte array is.}
+    \label{fig:design2}
+\end{figure*}
+
+As stated above the log records are created and written to a log file within each database function. The data field within each log record contains the contents of the database record before the log's corresponding operation took place. In theory this can cause the length of the log record to vary with respect to the length of the database record the log describes. Although in this implementation the data field is always 40 bytes for the sake of simplicity.
 
 \subsubsection{Log Roll Back}
 
