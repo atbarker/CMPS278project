@@ -58,7 +58,12 @@ BerkeleyDB presents a basic programming interface that allowed for storage of ba
 \subsection{System Design}
 The database roll back system is built on top of the BerkeleyDB key/value store as a sort of middleware that provides access to basic database functionality. A user can create multiple databases and insert, retrieve, update, and delete records of a fixed maximum size, usually in the form of a C structure. Each record recieves a unique key assigned to it upon insertion. 
 
-Design overview image
+\begin{figure*}
+    \centering
+    \includegraphics[height=3in]{rollbackDesgin.png}
+    \caption{System Design}
+    \label{fig:design1}
+\end{figure*}
 
 Different functions available to the user.
 
