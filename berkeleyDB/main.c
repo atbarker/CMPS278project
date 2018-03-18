@@ -109,7 +109,7 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
     int key = 0;
 
     for(i=0; i<trans; i++){
-        int txn_type = rand() % 3 + 1;
+        int txn_type = 1;
         //struct character ch = create_random_character();
         struct character ch = create_random_character();
         key = bitmap_get_rand(context->id_bitmap, context->bitmap_size);
@@ -120,7 +120,7 @@ int populate_db(int trans, DB *dbp, DB_ENV *env, struct db_context *context){
             //case 2: 
             //    delete(dbp, env, key, context);
             //    break;
-            case 3: 
+            case 2: 
                 update(dbp, env, key, &ch, context);
                 break;
             default:
@@ -137,18 +137,27 @@ DB* rollback_to_timestamp(struct db_context *context, DB_ENV *env, DB *dbp, char
     int partitions = 4;
     int rollback_lsn = records;
     struct rollback_summary *sum = NULL;
+    DB_LOGC *cursor;
+    pthread_mutex_t rollback_lock;
 
     if(parallel){
-        sum = rollback_parallel(0, time, partitions, rollback_lsn, dbp, env, context);
+        env->log_cursor(env, &cursor, 0);
+        pthread_mutex_init(&rollback_lock, NULL);
+        rollback_parallel(0, time, partitions, rollback_lsn, dbp, env, cursor, context, &rollback_lock);
     }else{
-        sum = rollback_linear(NULL, dbp, env, context);
+        sum = rollback_linear(records, dbp, env, context);
     }
-   
+    pthread_mutex_destroy(&rollback_lock);
+    cursor->close(cursor, 0);
+    //printf("done");
     //rollback_destruct(sum);
     return NULL;
 }
 
-
+//argv[1] = number of transactions
+//argv[2] = number of rollback
+//argv[3] = partition or no
+//argv[4] = partition #
 int main(int argc, char *argv[]){
 
     struct db_context *context = malloc(sizeof(struct db_context));
@@ -156,7 +165,8 @@ int main(int argc, char *argv[]){
     DBC *cursor = NULL;
     DB_ENV *env = NULL;
     int fill = 1;
-    int transactions = 1024;
+    int transactions = 65536;
+    int to_access = 10000;
     random_index = 0;
 
     context->current_id = 0;
@@ -204,11 +214,12 @@ int main(int argc, char *argv[]){
 
     clock_t begin = clock();
 
-    rollback_to_timestamp(context, env, dbp, "bort", 1, 200);
+    rollback_to_timestamp(context, env, dbp, "bort", 1, to_access);
 
     clock_t end = clock();
     
     double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("time spent %f\n", time_spent);
 
     //while(TRUE){
         dbp->close(dbp, 0);
