@@ -183,7 +183,7 @@ Due to limitations posed by software errors the length of the roll backs could n
     \label{fig:RollbackSize}
 \end{figure*}
 
-\subsection{Memory and Storage Usage}
+\subsection{Memory and Storage Considerations}
 
 Although the memory usage of the different rollback summary generation methods are not compared it is safe to say that the memory consumption would be noticeably higher in a multithreaded environment because of the additional bookkeeping required to manage multiple rollback summaries. At a minimum the memory consumption would have to account for the space needed to store the rollback summary during construction, a bitmap to describe all allocated keys in the database, and a smattering of other small variables. If measures to relieve lock contention such as copying segments of the log into seperate memory were to be employed then the memory overhead would increase accordingly. With the tradeoff of potentially faster production of a rollback summary due to reduced reads from disk.
 
