@@ -17,14 +17,17 @@
 %\begin{multicols}{1}
 
 \textbf{Abstract:} 
-\section{Introduction}
-Many modern database systems utilize some form of logging in order to provide ACID characteristics for their transactions, backup, and recovery features. Through systems such as Write Ahead Logging, undo operations done with the support of a database transaction log are relatively common\cite{WAL}. Although what is not explored is the ability to reapply these logs as undo operations in parallel by breaking up the log to be rolled back into discrete chunks. These discrete chunks could then be applied to the database in batches as either part of the undo step of a recovery algorithm or in order to restore the state of the database to some desired previous point in time.
+Parallelization is becoming more common in database technology and there is little being done in the area of log rollback. With parallelization it is possible to obtain small but important performance gains when applying logs to a database or enable a database administrator to roll back to a previous instance at will. So long as the log possess the requisite detail. This paper explores the viability of a parallelized database log application system that breaks up the log into discrete chunks and computes summaries that can then be applied to the database. Such a system is implemented and used to demonstrate the possible performance and flexibility to be gained from using such a log application technique.
 
-This paper presents a database logging system built on top of the BerkeleyDB key/value store that provides sufficient detail in its logging records to enable reconstruction of a database at any point in time that is described by the log. This is accomplished through compositing operations described in the log into a summary of all changes to the database between two points in time or log sequence numbers. One or more of these summaries are then applied to the database in order to produce an instance of the database as it existed at a previous time. In essence the system performs undo operations on the database in a parallelized manner.
+\section{Introduction}
+With the movement towards more multicore parallelizable workloads in database systems it is worth wondering whether or not it is worth while to give the same treatment to how logs are handled. Many modern database systems utilize some form of logging in order to provide ACID characteristics for their transactions, backup, and recovery features. Through systems such as Write Ahead Logging, undo operations done with the support of a database transaction log are relatively common\cite{WAL}. Although what is not explored is the ability to reapply these logs as undo operations in parallel by breaking up the log to be rolled back into discrete chunks. These discrete chunks could then be applied to the database in batches as either part of the undo step of a recovery algorithm or in order to restore the state of the database to some desired previous point in time at the user's behest.
+
+This paper presents a database logging system built on top of the BerkeleyDB key/value store that provides sufficient detail in its logging records to enable reconstruction of a database at any point in time that is described by the log. This is accomplished through compositing operations described in the log into a summary of all changes to the database between two points in time or log sequence numbers. One or more of these summaries are then applied to the database in order to produce an instance of the database as it existed at a previous time.
 \section{Problem}
+The problem posed is whether or not it is feasible or worthwhile to parallelize log roll back, undo, redo, etc by computing summaries of discrete chunks of log records that can then each be applied to a database to reconstruct its state at a previous time.
 
 \subsection{Background} 
-Among current database systems there are very few that enable a roll back to a specific time stamp. Most simply utilize their logging infrastructure to ensure basic ACID characteristics or for backup and recovery tasks.
+Among current database systems there are very few that enable a roll back to a specific time stamp that can be invoked by the user or that is executed in parallel. Most simply utilize their logging infrastructure to ensure basic ACID characteristics or for backup and recovery tasks and are executed linearly.
 
 In the case of Databases such as PostgreSQL and the InnoDB component of MySQL will utilize their write ahead log not only for redo and undo operations similarly to write ahead logging but they will also use them for backup operations and something called point-in-time recovery (PITR)\cite{InnoDBpoint} \cite{Postgrespoint}. PITR enables a full backup of the database to be stored at regular intervals and then be restored to the latest state of the database by playing redo operations from the log on top of the backup.
 
@@ -57,7 +60,7 @@ Though that would depend on whether or not the system was implemented in a lower
 database system or the implementation of a new one. Most likely this would manifest itself in a simpler
 relational database such as SQLite. Primarily due to the small size of the source code.\\
 
-In the end a smattering of the three different milestones manifested themselves in the final product. It contained the objective of the first milestone, the parallelized element of the second and the interface with an existing database system from the third.\\
+In the end a smattering of the three different milestones manifested themselves in the final implementation. It contained the objective of the first milestone, the parallelized element of the second and the interface with an existing database system from the third.\\
 
 \subsection{SQLite background}
 Initially the logs used for the testing of whatever form the new implementation would take were to come from a small instance of PostgreSQL. Although it became clear from the lack of easily located documentation concerning its logging infrastructure that it would not be practical to use for the initial proof of concept. This led to a transition to SQLite. A small and lightweight relational database intended for use in embedded applications such as is commonly found in web applications. A small python application was used to randomly insert, update, retrieve, and delete records in a single table at regular intervals.
@@ -145,24 +148,52 @@ The initial intention was to implement a system that would produce a summary fro
 It is for these reasons that BerkeleyDB was eventually chosen, albeit too late for a sophisticated implementation, for the underlying datastore and log producer. The extensive programming interface it presented allowed for much of the functionality for a roll back system to be built from the ground up as opposed to extensive and haphazard modification of an existing database system. Overall the use of BerkeleyDB as a starting point in developing the roll back system proved to be more effective as a proof of concept than the predicted path that SQLite or a more complex DBMS would have required. 
 
 \section{Results}
+In this section we evaluate the current status of the project and present performance results. All quantitative results were produced with the implemented system running on top of a BerkeleyDB key/value store configured to use a B tree. The test machine  is as follows: Ubuntu 16.04-LTS, an Intel i5-4430 (four cores at 3.2GHz), 16GB DDR3 RAM, and a 128GB Samsung SSD. 
 \subsection{Implementation Status}
 
 As of the writing of this paper goals A and B have been accomplished and goal C has been partially accomplished. The implemented system can take a database and its corresponding log and process discrete chunks of the log in a parallelized manner. When complete it outputs a summary of what exactly has changed in the database. In essence a database equivalent of the "diff" command. 
 
 When development pivoted from the use of SQLite to the use of BerkeleyDB the original object laid out in goal C was deemed irrelevant. Although in a way it was accomplished. BerkeleyDB, while old, it still a commonly used and established piece of software and the lower level storage engine interface proved to be the right level at which to pursue an implementation of a roll back system.
 
-\subsection{Current Log Application Methods}
+Although we can say that the project has achieved the goals set at its inception the software is still far from usable. Some measurements could not be produced due to the as of yet undefined errors plaguing the system when running as a multithreaded application. Additionally the database itself cannot reliably scale beyond a size that would require more one log files as sufficiently large rollback operations would then span across said files.
 
-\subsection{Linear Log Application}
-\subsection{Parallelized Log Application}
-\subsection{Time/State Restoration}
+%\subsection{Current Log Application Methods}
+
+\subsection{Effects of Database Size}
+\begin{figure*}
+    \centering
+    \includegraphics[height=2.5in]{latencyvsrecords.png}
+    \caption{The effects of database size on summary reconstruction time. Each summary is produced by rolling back 500 log records.}
+    \label{fig:DatabaseSize}
+\end{figure*}
+
+First we evaluated the latency of producing a rollback summary with respect to the size of the database. This was done on database sizes varying from 1024 records up to 131072 records, because powers of two caused the least errors during testing. Also varied was the number of threads used. Configurations of one, two, and four threads were tested. Each rollback summary consists of 500 log records. Which were divided equally in the case of multithreaded configurations. It can be observed that as the database grows in size the latency for the single threaded configuration scales linearly. In the case of both the two and four thread configurations the latency increases but at a vastly slower rate. In spite of the somewhat haphazard measurements from the four threaded configuration. Therefore for a larger database and a relatively small rollback length there is much to be gained from computing summaries in parallel.
+
+\subsection{Effects of Rollback Length}
+
+Next evaluated was the effect that the number of log records we would roll back by has on the amount of time needed to produce a rollback summary. For these measurements the database consisted of 65536 records with roll back lengths varying from 200 to 5000 log records. Again log records are divided equally amongst threads in multithreaded configurations.
+
+Due to limitations posed by software errors the length of the roll backs could not be pushed to larger sizes. This is also the same reason as to why there are no results for a two thread configuration shown. We can see that up until a rollback size of 1000 records the four thread configuration performs better but once we go above that the performance begins to suffer. This is most likely due to lock contention similarly as observed by Ryan Johnson et al. in parallelized transaction processing techniques\cite{transaction}. The implemenatation tested used the BerkeleyDB log retrieval functions that relied on a log cursor, of which only one could exist without causing unrecoverable errors. Therefore each thread had to wait for a lock on the shared log cursor. Possible solutions could include multiple log files for each thread or copying each thread's partition of the log into seperate memory regions. All of which would eliminate the log cursor as a critical region. Overall with the current implementation it would be advisable to use a single threaded configuration when processing larger rollback summaries.  
+
+\begin{figure*}
+    \centering
+    \includegraphics[height=2.5in]{sizevslatency.png}
+    \caption{Effects of rollback size on summary reconstruction time. The database for each run consisted of 65536 records. Due to software errors two thread results are omitted.}
+    \label{fig:RollbackSize}
+\end{figure*}
 \subsection{Current Limitations}
-Currently the system has difficulty with larger numbers of partitions in the log. Also there is a significant lock contention issue when reading the log file from multiple threads. A possible solution to this is multiple copies of the log file for each individual thread or spreading the log across multiple files.
+Currently the system has difficulty with larger numbers of threads, specifically more than 4. There is a significant lock contention issue when utilizing a multithreaded configuration for rollback sizes in excess of 1000 records as described earlier. The database size is likewise limited by the maximum size of the log files.
 
-Another major limitation of this system is the log overhead. In the process of storing log records with enough information to reconstruct the database at any given time a significant amount of storage space is used. 
+Another major limitation of this system is the log overhead. In the process of storing log records with enough information to reconstruct the database at any given time a significant amount of storage space is used. In the case of a database containing 65536 records the actual database takes up about 6.4MB but the log will easily consume 10MB worth of records for just insert operations to fill the database. Therefore it would be advisable to set a time to live (TTL) for the log records, roll them up into database summaries and store those, or some other measure to reduce the log overhead of the database.
+
 \subsection{Future Work}
-\section{Conclusion}
+Despite the limitations of the current implementation it is evident that refinement of the presented ideas may be worth pursuing. 
+Paramount to the future of this project is the stability and versatility ot its implementation. Potential future work on this system would include refactoring the codebase in order to solve the multitude of software errors that currently plague it. In the interest of determining the upper bounds on performance more deeply exploring the causes behind scalability limitations beyond four thread configurations. It would be important to rewrite the algorithm for retrieving log records from the file in such a way to reduce or eliminate lock contention and also so that it can correctly process rollbacks across multiple log files to remove the upper bound on database size. Certain features such as timestamp resolution had become lower priority in the face of the need for a minimally functional implementation. Therefore it would be advantageous to finish implementing that feature in the interest of usability. Lastly it would be beneficial to provide a system to automatically roll up log files in the background and only store the database summaries, for which the storage costs are much lower. 
 
+\section{Conclusion}
+Here we have presented a database system built on top of BerkeleyDB to allow for the parallelized roll up of logs into summaries that can possibly allow for either efficient undo operations on a database or fast rollback to a given log sequence number or timestamp. Throughout the process of implementing such a system it has been made apparent that most database systems do not possess the necessary features to easily implement the needed functionality as an add on module. Therefore it has been deemed more effective to implement the system as a form of middleware between something like a key/value store and the rest of a database management system. 
+
+The quantitative results garnered from the initial implementation have highlighted many issues with the current implementation and a clear path forward in the systems future development. In spite of these obstacles the results are sufficient to warrant further pursuit of the project and eventual integration into a larger DBMS.
 \bibliography{278}
 
 %\end{multicols}
