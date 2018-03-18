@@ -4,13 +4,14 @@
 \usepackage{bibentry}
 \usepackage{multicol}
 \usepackage{enumitem}
+\usepackage{hyperref}
 \usepackage{blindtext}
 \usepackage{graphicx}
 \usepackage{amsmath, amssymb}
 \usepackage[margin=1in]{geometry}
 \setlength{\parindent}{2em}
 \begin{document}
-\title{CMPS 278 Final}
+\title{CMPS 278 Final Project}
 \author{Austen Barker}
 \maketitle
 
@@ -92,12 +93,14 @@ The system supports two methods of rolling back to a user specified timestamp. E
 
 In order to speed up the reconstruction process a thread could be set running in the background that would automatically produce a summary of changes for a given range of log records and store that alongside the database. Therefore whenever a roll back to a specific point in the log is desired the system only has to compute the summaries for the most recent log records and those between the specified log record and the nearest summary. This produces a situation where only two summaries must be computed instead of one for each time quanta.
 
+Log overhead would inevitably be an issue if a log record was stored for each individual operation performed on the database so it would be advantageous to provide some way of compressing the older logs, which would probably be less frequently accessed, into a more compact format. This can be done by computing a rollback summary from older logs in the background at user specified time intervals. These rollback summaries can then be stored as files in place of the older logs. Although this will produce a lower storage overhead for the system it will significantly reduce the resolution at which a database can be rolled back.
+
 \subsection{Testing Database Setup}
 
-The database used to test the performance of the proof-of-concept implementation stored basic statistics for a set of Dungeons and Dragons characters. Each character was randomly generated using a simple C program. For each character the database stored an id, a name, a class, the character's health, whether or not the character was alive, and the character's level. In order to populate the database the user would specify a number of random transactions to perform. The transaction generator function would perform approximated an equal number of insert, retrieve, update, and delete operations.
+The database used to test the performance of the proof-of-concept implementation stored basic statistics for a set of Dungeons and Dragons characters. Each character was randomly generated using a simple C program. For each character the database stored an id, a name, a class, the character's health, whether or not the character was alive, and the character's level. In total this information produces records of 40 bytes each. In order to populate the database the user would specify a number of random transactions to perform. The transaction generator function performs approximately an equal number of insert, retrieve, update, and delete operations with user specified final database size and transaction count.
 
 \subsection{Implementation}
-The log roll back system takes the form of a piece of basic middleware that is designed to interface with BerkeleyDB through the C API bindings and then presents itself as a library to user applications. The entirety of the program is implemented in C as it provided the right low level access and flexibility required to efficiently implement the structures that make up the core of the project.
+The log roll back system takes the form of a piece of basic middleware that is designed to interface with BerkeleyDB through the common C API bindings and then presents itself as a library to user applications. The entirety of the program is implemented in C as it provided the right low level access and flexibility required to efficiently implement the structures that make up the core of the project.
 
 \subsubsection{Database Context}
 When a database is started it creates a context for itself. This context is used by the roll back system to define a database and its attributes. This context contains a BerkeleyDB database pointer, an environment pointer, the most recent log sequence number, the current number of keys in the database, a bit vector to keep track of unique keys, and the bit vector's length. 
@@ -139,9 +142,6 @@ Each byte array contains the data field of a log record while the bitmap is used
 For a parallelized rollback we break up the logs between the present database configuration and the desired rollback point into a set of partitions defined by upper and lower bound log sequence numbers. 
 A new thread is created for each partition and produces its own summary. Currently the summaries from each thread are not merged together but instead are applied to the database individually. One major limitation of the current implementation is that BerkeleyDB will seemingly not allow two log cursors on a single file so therefore all the threads must share. With a shared resource a locking mechanism must be implemented which then produces overhead via lock contention.
 
-
-Resulting programming interface for BerkeleyDB.
-
 \subsubsection{Underlying Database Challenges}
 The initial intention was to implement a system that would produce a summary from the logs of an existing database management system such as SQLite or PostgreSQL. Out of these choices SQLite was selected as it provided more detailed technical documentation and a simpler codebase. The first challenge encountered while collecting log records for experimentation and prototyping was the fact that SQLite's log and journal files are temporary and disappear when a session is close or are cleared periodically. The second challenge was the lack of a timestamp or other easily recognizable identifying marker on each record such as a log sequence number. The lack of this feature essential to goal A would neccessitate the modification of SQLite in order to even start experimenting and collecting log information. Third was the inconvient format of having each entry in the log be a copy of a changed database page. 
 
@@ -149,6 +149,7 @@ It is for these reasons that BerkeleyDB was eventually chosen, albeit too late f
 
 \section{Results}
 In this section we evaluate the current status of the project and present performance results. All quantitative results were produced with the implemented system running on top of a BerkeleyDB key/value store configured to use a B tree. The test machine  is as follows: Ubuntu 16.04-LTS, an Intel i5-4430 (four cores at 3.2GHz), 16GB DDR3 RAM, and a 128GB Samsung SSD. 
+
 \subsection{Implementation Status}
 
 As of the writing of this paper goals A and B have been accomplished and goal C has been partially accomplished. The implemented system can take a database and its corresponding log and process discrete chunks of the log in a parallelized manner. When complete it outputs a summary of what exactly has changed in the database. In essence a database equivalent of the "diff" command. 
@@ -194,6 +195,9 @@ Paramount to the future of this project is the stability and versatility ot its 
 Here we have presented a database system built on top of BerkeleyDB to allow for the parallelized roll up of logs into summaries that can possibly allow for either efficient undo operations on a database or fast rollback to a given log sequence number or timestamp. Throughout the process of implementing such a system it has been made apparent that most database systems do not possess the necessary features to easily implement the needed functionality as an add on module. Therefore it has been deemed more effective to implement the system as a form of middleware between something like a key/value store and the rest of a database management system. 
 
 The quantitative results garnered from the initial implementation have highlighted many issues with the current implementation and a clear path forward in the systems future development. In spite of these obstacles the results are sufficient to warrant further pursuit of the project and eventual integration into a larger DBMS.
+
+The implementation source code is available at \url{https://github.com/atbarker/CMPS278project}
+
 \bibliography{278}
 
 %\end{multicols}
